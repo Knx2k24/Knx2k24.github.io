@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Defender</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #gameInfo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameInfo">
+        <div id="playerInfo">
+            Player: <input type="text" id="playerName">
+            <button onclick="startGame()">Start Game</button><br>
+            High Score: <span id="highScore">0</span><br>
+            Lives: <span id="lives">3</span>
+        </div>
+        <div id="gameStatus" style="display: none;">
+            <div id="gameStats">
+                Level: <span id="level">1</span><br>
+                Asteroids Destroyed: <span id="asteroidsDestroyed">0</span><br>
+                Score: <span id="score">0</span>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Inicjalizacja canvas
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Ustawienie rozmiaru canvas
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Obrazki
+        const shipImage = new Image();
+        shipImage.src = 'ship.png'; // Twoje logo statku
+        const schoolImage = new Image();
+        schoolImage.src = 'school.png'; // Obrazek szkoły
+
+        // Inicjalizacja statku
+        const ship = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 50,
+            height: 50,
+            speed: 5,
+            score: 0,
+            lives: 3,
+            bullets: []
+        };
+
+        // Inicjalizacja asteroid
+        const asteroids = [];
+        const asteroidSpeed = 2;
+        const asteroidSize = 20;
+        let asteroidInterval = 1000; // Co ile milisekund ma się pojawiać asteroida
+        let level = 1;
+        let asteroidsDestroyed = 0;
+
+        // Pozycja szkoły
+        const school = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height / 2 - 25,
+            width: 50,
+            height: 50
+        };
+
+        // Pozycja informacji o grze
+        const gameInfo = document.getElementById('gameInfo');
+        const playerInfo = document.getElementById('playerInfo');
+        const gameStatus = document.getElementById('gameStatus');
+
+        // Obsługa klawiatury
+        const keys = [];
+        window.addEventListener('keydown', e => {
+            keys[e.keyCode] = true;
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.keyCode] = false;
+        });
+
+        // Rozpoczęcie gry
+        function startGame() {
+            const playerName = document.getElementById('playerName').value.trim();
+            if (playerName === '') {
+                alert('Please enter your name to start the game.');
+                return;
+            }
+            playerInfo.style.display = 'none';
+            gameStatus.style.display = 'block';
+            update();
+        }
+
+        // Funkcja aktualizująca grę
+        function update() {
+            // Poruszanie statkiem
+            if (keys[37]) { // Left arrow
+                ship.x -= ship.speed;
+            }
+            if (keys[39]) { // Right arrow
+                ship.x += ship.speed;
+            }
+            if (keys[38]) { // Up arrow
+                ship.y -= ship.speed;
+            }
+            if (keys[40]) { // Down arrow
+                ship.y += ship.speed;
+            }
+
+            // Strzelanie
+            if (keys[32]) { // Spacebar
+                fireBullet();
+            }
+
+            // Generowanie asteroid
+            if (Math.random() < 0.10) {
+                createAsteroid();
+            }
+
+            // Aktualizacja położenia asteroid
+            asteroids.forEach(asteroid => {
+                // Obliczanie wektora kierunku od asteroidy do szkoły
+                const dx = school.x - asteroid.x;
+                const dy = school.y - asteroid.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                let speedX = (dx / distance) * asteroidSpeed;
+                let speedY = (dy / distance) * asteroidSpeed;
+
+                // Aktualizacja położenia asteroid
+                asteroid.x += speedX;
+                asteroid.y += speedY;
+
+                // Sprawdzenie kolizji z statkiem
+                if (collision(ship, asteroid)) {
+                    handleCollision();
+                }
+                // Sprawdzenie kolizji z pociskami
+                ship.bullets.forEach((bullet, bulletIndex) => {
+                    if (collision(bullet, asteroid)) {
+                        destroyAsteroid(asteroid);
+                        ship.bullets.splice(bulletIndex, 1);
+                        ship.score++;
+                        asteroidsDestroyed++;
+                        document.getElementById('score').textContent = ship.score;
+                        document.getElementById('asteroidsDestroyed').textContent = asteroidsDestroyed;
+                        if (asteroidsDestroyed >= 100) {
+                            level++;
+                            document.getElementById('level').textContent = level;
+                            asteroidsDestroyed = 0;
+                        }
+                    }
+                });
+
+                // Odbijanie asteroidy od krawędzi canvas
+                if (asteroid.x <= 0 || asteroid.x >= canvas.width - asteroidSize) {
+                    speedX = -speedX;
+                }
+                if (asteroid.y <= 0 || asteroid.y >= canvas.height - asteroidSize) {
+                    speedY = -speedY;
+                }
+            });
+
+            // Rysowanie obiektów
+            draw();
+            
+            // Aktualizacja gry co określony czas
+            requestAnimationFrame(update);
+        }
+
+        // Rysowanie obiektów
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(schoolImage, school.x, school.y, school.width, school.height); // Rysowanie szkoły
+            ctx.drawImage(shipImage, ship.x - ship.width / 2, ship.y - ship.height / 2, ship.width, ship.height); // Rysowanie statku
+
+            // Rysowanie asteroid
+            asteroids.forEach(asteroid => {
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(asteroid.x, asteroid.y, asteroidSize, asteroidSize);
+            });
+
+            // Rysowanie pocisków
+            ship.bullets.forEach(bullet => {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(bullet.x, bullet.y, 5, 5);
+            });
+
+            // Wyświetlanie informacji o grze
+            document.getElementById('highScore').textContent = localStorage.getItem('highScore') || 0;
+            document.getElementById('lives').textContent = ship.lives;
+
+            // Sprawdzenie czy gra się zakończyła
+            if (ship.lives <= 0) {
+                gameOver();
+            }
+        }
+
+        // Funkcja tworząca asteroid
+        function createAsteroid() {
+            let x, y;
+            const side = Math.floor(Math.random() * 4); // Losowy bok ekranu
+            switch (side) {
+                case 0: // Górny bok
+                    x = Math.random() * canvas.width;
+                    y = 0;
+                    break;
+                case 1: // Prawy bok
+                    x = canvas.width;
+                    y = Math.random() * canvas.height;
+                    break;
+                case 2: // Dolny bok
+                    x = Math.random() * canvas.width;
+                    y = canvas.height;
+                    break;
+                case 3: // Lewy bok
+                    x = 0;
+                    y = Math.random() * canvas.height;
+                    break;
+            }
+            const asteroid = {
+                x: x,
+                y: y,
+                width: asteroidSize,
+                height: asteroidSize
+            };
+            asteroids.push(asteroid);
+        }
+
+        // Funkcja obsługująca strzały
+        function fireBullet() {
+            const bullet = {
+                x: ship.x,
+                y: ship.y - ship.height / 2,
+                width: 5,
+                height: 5
+            };
+            ship.bullets.push(bullet);
+        }
+
+        // Funkcja sprawdzająca kolizję między dwoma obiektami
+        function collision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+
+        // Funkcja obsługująca zderzenie statku z asteroidą
+        function handleCollision() {
+            ship.lives--;
+            if (ship.lives > 0) {
+                restartGame();
+            }
+        }
+
+        // Funkcja kończąca grę
+        function gameOver() {
+            const playerName = document.getElementById('playerName').value.trim();
+            alert(`Game Over! Your score: ${ship.score}`);
+            saveScore(playerName, ship.score);
+            restartGame();
+        }
+
+        // Funkcja niszcząca asteroid
+        function destroyAsteroid(asteroid) {
+            asteroids.splice(asteroids.indexOf(asteroid), 1);
+        }
+
+        // Zapisywanie wyniku do lokalnego przechowywania
+        function saveScore(playerName, score) {
+            const highScore = localStorage.getItem('highScore') || 0;
+            if (score > highScore) {
+                localStorage.setItem('highScore', score);
+                localStorage.setItem('playerName', playerName);
+            }
+        }
+
+        // Restart gry
+        function restartGame() {
+            ship.x = canvas.width / 2;
+            ship.y = canvas.height / 2;
+            ship.score = 0;
+            ship.bullets = [];
+            level = 1;
+            asteroidsDestroyed = 0;
+            asteroids.length = 0;
+        }
+    </script>
+</body>
+</html>
