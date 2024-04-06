@@ -10,6 +10,7 @@ let cHeight = 800;
 let scale = 2;
 can.style.width = cWidth + 'px';
 can.style.height = cHeight + 'px';
+can.style.cursor = "none";
 can.width = cWidth * scale;
 can.height = cHeight * scale;
 can.style.border = "1px black solid";
@@ -43,7 +44,7 @@ const ship = {
 
 
 //iniclalizacja zmiennych odpowiedzialnych za kontrolę FPS i delty
-const fps = 1000 / 60;
+const fps = 1000 / 90;
 let currFrame = 0;
 let deltaTime, lastTimestamp;
 
@@ -57,7 +58,10 @@ window.addEventListener('keyup', e => {
 });
 const mouse = {
     x: 0,
-    y: 0
+    y: 0,
+    rotation: 0,
+    height: 50,
+    width: 50
 }
 canvas.addEventListener("mousemove", function(e) { 
     var cRect = canvas.getBoundingClientRect(); 
@@ -70,41 +74,44 @@ function update(timestamp) {
     deltaTime = (timestamp - lastTimestamp) / fps;
     lastTimestamp = timestamp;
 
-    if(debugMode){
-        DrawDebugInfo();
-    }
+    
 
     
     
     
     MoveShip();
-
-    //clearowanie ekranu
     DrawShip();
+    DrawCrosshair();
+    
+    if(debugMode){
+        DrawDebugInfo();
+    }
 
     setTimeout(() => {
         requestAnimationFrame(update);
         ctx.clearRect(0, 0, can.width, can.height);
     }, fps);
 }
+
+function DrawCrosshair(){
+    const crosshairImage = new Image();
+    crosshairImage.src = 'crosshair.png';
+    ctx.drawImage(crosshairImage, mouse.x -(mouse.width/2), mouse.y -(mouse.height/2), 50, 50);
+}
+
 let XOffset, YOffset;
 function DrawShip(){
     const shipImage = new Image();
     shipImage.src = 'ship.png';
     
-
-    
-    
-    
     //kontrola rotacjii statku
-    XOffset = ship.x;
-    YOffset = ship.y;
-
-    ctx.translate(XOffset, YOffset)
+   
+    //najpierw zmieniamy punk 0:0 canvasu, obracamy o tyle ile jest obrotu statku, rysujemy statek a później odwracamy tak jak było
+    ctx.translate(ship.x, ship.y)
     ctx.rotate(ToRads(ship.rotation))
     ctx.drawImage(shipImage, -ship.width/2, -ship.height/2, ship.width, ship.height);
     ctx.rotate(ToRads(-ship.rotation))
-    ctx.translate(-XOffset, -YOffset)
+    ctx.translate(-ship.x, -ship.y)
 }
 
 function DrawDebugInfo(){
@@ -117,6 +124,9 @@ function DrawDebugInfo(){
     ctx.fillText("sY: " + ship.y.toFixed(4),10,350);
     ctx.fillText("mX: " + mouse.x,800,50);
     ctx.fillText("mY: " + mouse.y,800,100);
+    ctx.fillText("DEBUG MODE ON", 10, 1600)
+
+ 
 }
 
 function MoveShip(){
