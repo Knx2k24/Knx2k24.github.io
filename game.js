@@ -1,4 +1,10 @@
 let debugMode = true;
+
+const gameState = {
+    play: false,
+    over: false,
+    pause: false
+}
 //Iniclaizacjia elementów
 const can = document.getElementById("canvas");
 const ctx = can.getContext("2d");
@@ -25,6 +31,7 @@ if(can){
 //Funkcja, która się wykona po wczytaniu JSa
 function OnLoad(){
     requestAnimationFrame(update);
+    gameState.play = true;
 }
 
 
@@ -41,6 +48,7 @@ const ship = {
     sprite: 0,
     score: 0,
     lives: 3,
+    hp: 100,
     bulletFireSpeed: 20,
     mineFireSpeed: 20,
     bulletDelay: 0,
@@ -61,6 +69,14 @@ let deltaTime, lastTimestamp;
 const keys = [];
 window.addEventListener('keydown', e => {
     keys[e.key] = true;
+
+    if(e.key == "Escape"){
+        gameState.pause = !gameState.pause;
+    }
+
+    if(e.key == "x"){
+        debugMode = !debugMode;
+    }
 });
 window.addEventListener('keyup', e => {
     keys[e.key] = false;
@@ -95,7 +111,9 @@ canvas.addEventListener("mouseup", function(){
 });
 
 
-
+let maxRocks = 12;
+let spawnrateRocks = 200;
+let rocksDiffi = 5;
 function update(timestamp) {
     //obliczanie czasu od ostatniej klatki. Jeżeli gra będzie wolniej/szybciej updatować to "silnik" nie będzie działał szybciej/wolniej
     currFrame++;
@@ -109,13 +127,19 @@ function update(timestamp) {
         ship.mineDelay--;
     }
     
-    
     MoveShip();
-    DrawShip();
-    DrawBullets();
-    DrawMines();
-    DrawRocks();
-    DrawCrosshair();
+    if(gameState.play == true){
+        DrawShip();
+        DrawBullets();
+        DrawMines();
+        DrawRocks();
+        DrawCrosshair();
+        
+        if(currFrame%spawnrateRocks == 0 && rocks.length < maxRocks){
+            SpawnWave(getRandomInt(rocksDiffi));
+        }
+
+    }
 
     
     if(debugMode){
@@ -131,7 +155,32 @@ function update(timestamp) {
 
 }
 
+function RestartGame(){
+    ship.x = can.width/2;
+    ship.y = can.height/2;
+    ship.bullets = [];
+    ship.mines = [];
+    rocks = [];
+    gameState.play = true;
+    gameState.over = false;
+    gameState.pause = false;
+    ship.hp = 100;
+    ship.lives = 3;
+    ship.score = 0;
+}
 
+
+function checkLives(){
+    if(ship.hp <= 0){
+        ship.lives--;
+        ship.hp = 100;
+    }
+
+    if(ship.lives == 0){
+        gameState.play = false;
+        gameState.over = true;
+    }
+}
 
 function DrawCrosshair(){
     const crosshairImage = new Image();
@@ -147,6 +196,7 @@ function DrawShip(){
     //kontrola rotacjii statku
    
     //najpierw zmieniamy punk 0:0 canvasu, obracamy o tyle ile jest obrotu statku, rysujemy statek a później odwracamy tak jak było
+    
     ctx.translate(ship.x, ship.y)
     ctx.rotate(ToRads(ship.rotation))
     ctx.drawImage(shipImage, -ship.width/2, -ship.height/2, ship.width, ship.height);
@@ -163,43 +213,59 @@ function DrawDebugInfo(){
     ctx.fillText("shipRotation: " + ship.rotation.toFixed(4),10,250);
     ctx.fillText("sX: " + ship.x.toFixed(4),10,300);
     ctx.fillText("sY: " + ship.y.toFixed(4),10,350);
+    ctx.fillText("sHP: " + ship.hp, 10, 400)
+    ctx.fillText("sLiv: " + ship.lives, 10, 450)
     ctx.fillText("mX: " + mouse.x,800,50);
     ctx.fillText("mY: " + mouse.y,800,100);
     ctx.fillText("lClick: " + mouse.leftClick,1200,50);
     ctx.fillText("rClick: " + mouse.rightClick,1200,100);
     ctx.fillText("bCount: " + ship.bullets.length, 800, 200)
     ctx.fillText("mCount: " + ship.mines.length, 800, 250)
+    ctx.fillText("rCount: " + rocks.length, 800, 300)
+    ctx.fillText("play: " + gameState.play, 1600, 50)
+    ctx.fillText("over: " + gameState.over, 1600, 100)
+    ctx.fillText("pause: " + gameState.pause, 1600, 150)
     
-    ctx.fillText("DEBUG MODE ON", 10, 1600)
+    ctx.fillText("DEBUG MODE ON| press: e = spawnRock, r = restart, q = spawnWave, x = toggleDebug", 10, 1400)
 }
 
 function MoveShip(){
 
-    ship.rotation = ToDeg(Math.atan2(mouse.x - ship.x, - (mouse.y - ship.y)));
+    
+    if(!gameState.pause){
+        ship.rotation = ToDeg(Math.atan2(mouse.x - ship.x, - (mouse.y - ship.y)));
+        if(keys["ArrowLeft"] || keys["a"]){
+            ship.xAcc += -ship.speed * deltaTime;
+        }
+        if(keys["ArrowRight"] || keys["d"]){
+            ship.xAcc += ship.speed * deltaTime;
+        }
+        if(keys["ArrowUp"]|| keys["w"]){
+            ship.yAcc += -ship.speed * deltaTime;
+        }
+        if(keys["ArrowDown"]|| keys["s"]){
+            ship.yAcc += ship.speed * deltaTime;
+        }
 
-    if(keys["ArrowLeft"] || keys["a"]){
-        ship.xAcc += -ship.speed * deltaTime;
-    }
-    if(keys["ArrowRight"] || keys["d"]){
-        ship.xAcc += ship.speed * deltaTime;
-    }
-    if(keys["ArrowUp"]|| keys["w"]){
-        ship.yAcc += -ship.speed * deltaTime;
-    }
-    if(keys["ArrowDown"]|| keys["s"]){
-        ship.yAcc += ship.speed * deltaTime;
+        if(mouse.leftClick){
+            FireBullet();
+        }
+        if(mouse.rightClick){
+            FireMine();
+        }
     }
 
     if(debugMode && keys["e"] && currFrame%10 == 0){
-        spawnEnemy()
+        SpawnEnemy(500, 500, "rock")
+    }
+    if(debugMode && keys["q"] && currFrame%10 == 0){
+        SpawnWave(1)
+    }
+    if(debugMode && keys["r"]){
+        RestartGame();
     }
 
-    if(mouse.leftClick){
-        FireBullet();
-    }
-    if(mouse.rightClick){
-        FireMine();
-    }
+    
 
 
     ship.xAcc *= 0.9;
@@ -239,7 +305,7 @@ function FireBullet() {
             distance: 0,
             speedX: 0,
             speedY: 0,
-            dmg: 10
+            dmg: 25
         };
         ship.bullets.push(bullet);
         ship.bulletDelay = ship.bulletFireSpeed;
@@ -257,6 +323,7 @@ function FireMine() {
             maxDecay: 0,
             firstFrame: true,
             alive: true,
+            dmg: 100
         };
         ship.mines.push(mine);
         ship.mineDelay = ship.mineFireSpeed;
@@ -264,31 +331,68 @@ function FireMine() {
 }
 
 
-let rocks = [];
-
-function spawnEnemy(){
-    const rock = {
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        speed: 1,
-        width: 90,
-        height: 90,
-        sprite: 0,
-        maxHp: 100,
-        hp: 100,
-        firstFrame: true,
-        alive: true
+const tL = {x:0, y: 0};
+const tR = {x:can.width, y:0};
+const bL = {x: 0, y: can.height};
+const bR = {x:can.width, y:can.height};
+function SpawnWave(numEnemy){
+    
+    for(let i = 0; i < numEnemy; ++i){
+        let random = getRandomInt(4)
+        console.log(random)
+        if(random == 0){
+            SpawnEnemy(tL.x, tL.y, "rock")
+        }else if(random == 1){
+            SpawnEnemy(tR.x, tR.y, "rock")
+        }else if(random == 2){
+            SpawnEnemy(bL.x, bL.y, "rock")
+        }else if(random == 3){
+            SpawnEnemy(bR.x, bR.y, "rock")
+        }
     }
-    rocks.push(rock)
+}
+
+let rocks = [];
+function SpawnEnemy(xPos, yPos, type, xVel, yVel){
+    if(type == "rock"){
+        const rock = {
+            x: xPos,
+            y: yPos,
+            speed: 1,
+            width: 90,
+            height: 90,
+            sprite: 0,
+            maxHp: 100,
+            hp: 100,
+            firstFrame: true,
+            alive: true,
+            dx: 0,
+            dy: 0,
+            distance: 0,
+            speedX: 0,
+            speedY: 0,
+        }
+        rocks.push(rock)
+    }
 }
 
 function DrawRocks(){
     rocks.forEach(rock => {
         if(rock.alive){
             if(rock.firstFrame){
-                
+                rock.dx = can.width/2 - rock.x + getRandomArbitrary(-400, 400);
+                rock.dy = can.height/2 - rock.y + getRandomArbitrary(-400, 400);
+                rock.distance = Math.sqrt(rock.dx * rock.dx + rock.dy * rock.dy);
+                rock.speedX = (rock.dx / rock.distance) * rock.speed * getRandomArbitrary(-1.5, -1.5);
+                rock.speedY = (rock.dy / rock.distance) * rock.speed * getRandomArbitrary(-1.5, -1.5);
                 rock.firstFrame = false;
             }
+
+            if(!gameState.pause){
+                rock.x += rock.speedX *deltaTime;
+                rock.y += rock.speedY *deltaTime;
+            }
+
 
             ship.bullets.forEach((bullet, bulletIndex) => {
                 if (Collision(bullet, rock)) {
@@ -297,8 +401,40 @@ function DrawRocks(){
                     console.log(rock.hp)
                 }
             })
+            ship.mines.forEach((mine, mineIndex) => {
+                if (Collision(mine, rock)) {
+                    rock.hp -= mine.dmg;
+                    ship.mines.splice(mineIndex, 1);
+                    console.log(rock.hp)
+                }
+            })
+
+            if (Collision(ship, rock)) {
+                rock.hp = 0;
+                ship.hp -= 20;
+                checkLives();
+                console.log(rock.hp)
+            }
+
+            if(rock.x > can.width){
+                rock.x = 0
+            }
+            if(rock.y > can.height){
+                rock.y = 0
+            }
+            if(rock.x < 0){
+                rock.x = can.width;
+            }
+            if(rock.y < 0){
+                rock.y = can.height;
+            }
 
 
+            ctx.fillStyle = "rgb(134, 121, 121)";
+            ctx.fillRect(rock.x-2, rock.y-2, rock.width+4, rock.height+4);
+
+            ctx.fillStyle = "rgb(0, 0, 0)";
+            ctx.fillRect(rock.x, rock.y, rock.width, rock.height);
 
             ctx.fillStyle = "rgb(134, 121, 121, "+rock.hp/rock.maxHp+")";
             ctx.fillRect(rock.x, rock.y, rock.width, rock.height);
@@ -325,8 +461,11 @@ function DrawBullets(){
                 bullet.firstFrame = false;
             }
 
-            bullet.x += bullet.speedX *deltaTime;
-            bullet.y += bullet.speedY *deltaTime;
+            if(!gameState.pause){
+                bullet.decayTime--;
+                bullet.x += bullet.speedX *deltaTime;
+                bullet.y += bullet.speedY *deltaTime;
+            }
 
             if(bullet.x > can.width){
                 bullet.x = 0
@@ -343,7 +482,6 @@ function DrawBullets(){
 
             ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
             ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-            bullet.decayTime--;
             if(bullet.decayTime < 0){
                 bullet.alive = false;
                 ship.bullets.shift(); //żeby usuwało zabite kule
@@ -361,7 +499,12 @@ function DrawMines(){
             }
             ctx.fillStyle = "rgb(10, 255, 10, "+mine.decayTime/mine.maxDecay+")";
             ctx.fillRect(mine.x, mine.y, mine.width, mine.height);
-            mine.decayTime--;
+            
+            
+            if(!gameState.pause){
+                mine.decayTime--;
+            }
+            
             if(mine.decayTime < 0){
                 mine.alive = false;
                 ship.mines.shift(); //żeby usuwało zabite kule
@@ -383,7 +526,13 @@ function ToRads(degrees){
 function ToDeg(radians){
     return radians * (180/Math.PI);
 }
-
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+}
+function getRandomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
+}
+  
 
 
 //Dodanie nasłuchu na wczytanie JSa 
