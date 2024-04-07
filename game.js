@@ -226,7 +226,7 @@ function DrawDebugInfo(){
     ctx.fillText("over: " + gameState.over, 1600, 100)
     ctx.fillText("pause: " + gameState.pause, 1600, 150)
     ctx.fillText("Rdiffi: " + rocksDiffi, 1900, 50)
-    ctx.fillText("RspawnRate: " + spawnrateRocks, 1900, 100)
+    ctx.fillText("RspawnRate: " + spawnrateRocks,  1900, 100)
     
     ctx.fillText("DEBUG MODE ON| press: e = spawnRock, r = restart, q = spawnWave, x = toggleDebug", 10, 1400)
 }
