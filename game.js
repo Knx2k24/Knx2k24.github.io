@@ -131,6 +131,7 @@ function update(timestamp) {
     if(gameState.play == true){
         DrawShip();
         DrawBullets();
+        DrawShooter();
         DrawMines();
         DrawRocks();
         DrawCrosshair();
@@ -248,7 +249,7 @@ function MoveShip(){
         }
 
         if(mouse.leftClick){
-            FireBullet();
+            FireBullet("ship");
         }
         if(mouse.rightClick){
             FireMine();
@@ -257,6 +258,9 @@ function MoveShip(){
 
     if(debugMode && keys["e"] && currFrame%10 == 0){
         SpawnEnemy(500, 500, "rock")
+    }
+    if(debugMode && keys["f"] && currFrame%10 == 0){
+        SpawnEnemy(500, 500, "shooter")
     }
     if(debugMode && keys["q"] && currFrame%10 == 0){
         SpawnWave(1)
@@ -287,8 +291,8 @@ function MoveShip(){
     }
 }
 
-function FireBullet() {
-    if(ship.bulletDelay == 0){
+function FireBullet(type, obj) {
+    if(type=="ship" && ship.bulletDelay == 0){
         const bullet = {
             x: ship.x ,
             y: ship.y ,
@@ -309,6 +313,26 @@ function FireBullet() {
         };
         ship.bullets.push(bullet);
         ship.bulletDelay = ship.bulletFireSpeed;
+    }else if(type == "shooter" && shooter.bulletDelay == 0){
+        const bullet = {
+            x: obj.x ,
+            y: obj.y ,
+            speed: 5,
+            width: 10,
+            height: 10,
+            decayTime: 500,
+            maxDecay: 0,
+            firstFrame: true,
+            alive: true,
+            dx: 0,
+            dy: 0,
+            distance: 0,
+            speedX: 0,
+            speedY: 0,
+            dmg: 10
+        };
+        obj.bullets.push(bullet);
+        obj.bulletDelay = obj.bulletFireSpeed;
     }
 }
 
@@ -339,7 +363,7 @@ function SpawnWave(numEnemy){
     
     for(let i = 0; i < numEnemy; ++i){
         let random = getRandomInt(4)
-        console.log(random)
+    
         if(random == 0){
             SpawnEnemy(tL.x, tL.y, "rock")
         }else if(random == 1){
@@ -353,6 +377,7 @@ function SpawnWave(numEnemy){
 }
 
 let rocks = [];
+let shooters = [];
 function SpawnEnemy(xPos, yPos, type, xVel, yVel){
     if(type == "rock"){
         const rock = {
@@ -373,8 +398,115 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             speedY: 0,
         }
         rocks.push(rock)
+    }else if(type == "shooter"){
+        const shooter = {
+            x: xPos,
+            y: yPos,
+            speed: 0.4,
+            width: 120,
+            height: 120,
+            sprite: 0,
+            maxHp: 200,
+            hp: 200,
+            firstFrame: true,
+            alive: true,
+            dx: 0,
+            dy: 0,
+            distance: 0,
+            speedX: 0,
+            speedY: 0,
+            followDistance: 1000,
+            bullets: [],
+            bulletDmg: 10,
+            bulletDelay: 0,
+            bulletDelay: 400,
+            tag: "enemy"
+        }
+        shooters.push(shooter)
     }
 }
+
+function DrawShooter(){
+    shooters.forEach(shooter =>{
+        if(shooter.alive){
+            if(shooter.firstFrame){
+                
+                shooter.firstFrame = false;
+            }
+
+            shooter.dx = ship.x - shooter.x + getRandomArbitrary(-400, 400);
+            shooter.dy = ship.y - shooter.y + getRandomArbitrary(-400, 400);
+            shooter.distance = Math.sqrt(shooter.dx * shooter.dx + shooter.dy * shooter.dy);
+            console.log(shooter.distance)
+            if(shooter.distance > shooter.followDistance){
+                shooter.speedX = (shooter.dx / shooter.distance) * shooter.speed;
+                shooter.speedY = (shooter.dy / shooter.distance) * shooter.speed;
+            }else{
+                shooter.speedX = 0;
+                shooter.speedY = 0;
+            }
+
+
+            if(!gameState.pause){
+                shooter.x += shooter.speedX *deltaTime;
+                shooter.y += shooter.speedY *deltaTime;
+            }
+        
+        
+            ship.bullets.forEach((bullet, bulletIndex) => {
+                if (Collision(bullet, shooter)) {
+                    shooter.hp -= bullet.dmg;
+                    ship.bullets.splice(bulletIndex, 1);
+                    
+                }
+            })
+            ship.mines.forEach((mine, mineIndex) => {
+                if (Collision(mine, rock)) {
+                    shooter.hp -= mine.dmg;
+                    ship.mines.splice(mineIndex, 1);
+                    
+                }
+            })
+            
+            if (Collision(ship, shooter)) {
+                shooter.hp = 0;
+                ship.hp -= 35;
+                checkLives();
+            }
+
+            if(shooter.x > can.width){
+                shooter.x = 0
+            }
+            if(shooter.y > can.height){
+                shooter.y = 0
+            }
+            if(shooter.x < 0){
+                shooter.x = can.width;
+            }
+            if(shooter.y < 0){
+                shooter.y = can.height;
+            }
+            
+            DrawEnemyBullets(shooter);
+        
+            ctx.fillStyle = "rgb(230, 10, 10)";
+            ctx.fillRect(shooter.x-2, shooter.y-2, shooter.width+4, shooter.height+4);
+        
+            ctx.fillStyle = "rgb(0, 0, 0)";
+            ctx.fillRect(shooter.x, shooter.y, shooter.width, shooter.height);
+        
+            ctx.fillStyle = "rgb(230, 10, 10, "+shooter.hp/shooter.maxHp+")";
+            ctx.fillRect(shooter.x, shooter.y, shooter.width, shooter.height);
+        
+            if(shooter.hp <= 0){
+                shooter.alive = false;
+            } 
+        }
+    })
+}
+
+
+
 
 function DrawRocks(){
     rocks.forEach(rock => {
@@ -383,8 +515,8 @@ function DrawRocks(){
                 rock.dx = can.width/2 - rock.x + getRandomArbitrary(-400, 400);
                 rock.dy = can.height/2 - rock.y + getRandomArbitrary(-400, 400);
                 rock.distance = Math.sqrt(rock.dx * rock.dx + rock.dy * rock.dy);
-                rock.speedX = (rock.dx / rock.distance) * rock.speed * getRandomArbitrary(-1.5, -1.5);
-                rock.speedY = (rock.dy / rock.distance) * rock.speed * getRandomArbitrary(-1.5, -1.5);
+                rock.speedX = (rock.dx / rock.distance) * rock.speed * getRandomArbitrary(-1.5, 1.5);
+                rock.speedY = (rock.dy / rock.distance) * rock.speed * getRandomArbitrary(-1.5, 1.5);
                 rock.firstFrame = false;
             }
 
@@ -398,14 +530,14 @@ function DrawRocks(){
                 if (Collision(bullet, rock)) {
                     rock.hp -= bullet.dmg;
                     ship.bullets.splice(bulletIndex, 1);
-                    console.log(rock.hp)
+                    
                 }
             })
             ship.mines.forEach((mine, mineIndex) => {
                 if (Collision(mine, rock)) {
                     rock.hp -= mine.dmg;
                     ship.mines.splice(mineIndex, 1);
-                    console.log(rock.hp)
+                    
                 }
             })
 
@@ -413,7 +545,7 @@ function DrawRocks(){
                 rock.hp = 0;
                 ship.hp -= 20;
                 checkLives();
-                console.log(rock.hp)
+                
             }
 
             if(rock.x > can.width){
@@ -446,6 +578,8 @@ function DrawRocks(){
         }
     })
 }
+
+
 
 function DrawBullets(){
     ship.bullets.forEach(bullet => {
@@ -480,6 +614,8 @@ function DrawBullets(){
                 bullet.y = can.height;
             }
 
+            
+
             ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
             ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             if(bullet.decayTime < 0){
@@ -489,6 +625,7 @@ function DrawBullets(){
         }
     });
 }
+
 
 function DrawMines(){
     ship.mines.forEach(mine => {
