@@ -1,3 +1,4 @@
+//w sali
 let debugMode = true;
 
 const gameState = {
@@ -120,15 +121,15 @@ function update(timestamp) {
     deltaTime = (timestamp - lastTimestamp) / fps;
     lastTimestamp = timestamp;
     
-    if(ship.bulletDelay != 0){
-        ship.bulletDelay--;
-    }
-    if(ship.mineDelay != 0){
-        ship.mineDelay--;
-    }
     
     MoveShip();
     if(gameState.play == true){
+        if(ship.bulletDelay != 0){
+            ship.bulletDelay--;
+        }
+        if(ship.mineDelay != 0){
+            ship.mineDelay--;
+        }
         DrawShip();
         DrawBullets();
         DrawShooter();
@@ -313,14 +314,14 @@ function FireBullet(type, obj) {
         };
         ship.bullets.push(bullet);
         ship.bulletDelay = ship.bulletFireSpeed;
-    }else if(type == "shooter" && shooter.bulletDelay == 0){
+    }else if(type == "shooter" && obj.bulletDelay == 0){
         const bullet = {
-            x: obj.x ,
-            y: obj.y ,
+            x: obj.x + obj.width/2,
+            y: obj.y + obj.height/2,
             speed: 5,
-            width: 10,
-            height: 10,
-            decayTime: 500,
+            width: 25,
+            height: 25,
+            decayTime: 100,
             maxDecay: 0,
             firstFrame: true,
             alive: true,
@@ -418,9 +419,12 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             followDistance: 1000,
             bullets: [],
             bulletDmg: 10,
+            bulletFireSpeed: 0,
             bulletDelay: 0,
-            bulletDelay: 400,
-            tag: "enemy"
+            bulletFireSpeed: 100,
+            bulletDelay: 0,
+            tag: "enemy",
+            bulletSprite: 0,
         }
         shooters.push(shooter)
     }
@@ -444,14 +448,28 @@ function DrawShooter(){
             }else{
                 shooter.speedX = 0;
                 shooter.speedY = 0;
+                
             }
-
+            FireBullet("shooter", shooter);
+            DrawEnemyBullets(shooter);
+            
 
             if(!gameState.pause){
                 shooter.x += shooter.speedX *deltaTime;
                 shooter.y += shooter.speedY *deltaTime;
+
+                if(shooter.bulletDelay != 0){
+                    shooter.bulletDelay--;
+                }
             }
-        
+            
+            shooter.bullets.forEach((bullet, bulletIndex) => {
+                if (Collision(bullet, ship)) {
+                    ship.hp -= bullet.dmg;
+                    shooter.bullets.splice(bulletIndex, 1);
+                    
+                }
+            })
         
             ship.bullets.forEach((bullet, bulletIndex) => {
                 if (Collision(bullet, shooter)) {
@@ -460,6 +478,7 @@ function DrawShooter(){
                     
                 }
             })
+
             ship.mines.forEach((mine, mineIndex) => {
                 if (Collision(mine, rock)) {
                     shooter.hp -= mine.dmg;
@@ -487,8 +506,7 @@ function DrawShooter(){
                 shooter.y = can.height;
             }
             
-            DrawEnemyBullets(shooter);
-        
+
             ctx.fillStyle = "rgb(230, 10, 10)";
             ctx.fillRect(shooter.x-2, shooter.y-2, shooter.width+4, shooter.height+4);
         
@@ -579,7 +597,64 @@ function DrawRocks(){
     })
 }
 
+function DrawEnemyBullets(obj){
+    obj.bullets.forEach(bullet => {
+        if(bullet.alive){
+            if(bullet.firstFrame){
+                bullet.maxDecay = bullet.decayTime;
 
+                bullet.dx = ship.x - bullet.x - bullet.width/2;
+                bullet.dy = ship.y - bullet.y - bullet.height/2;
+                bullet.distance = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
+                bullet.speedX = (bullet.dx / bullet.distance) * bullet.speed;
+                bullet.speedY = (bullet.dy / bullet.distance) * bullet.speed;
+                bullet.firstFrame = false;
+            }
+
+            if(!gameState.pause){
+                bullet.decayTime--;
+                bullet.x += bullet.speedX *deltaTime;
+                bullet.y += bullet.speedY *deltaTime;
+            }
+
+            if(bullet.x > can.width){
+                bullet.x = 0
+            }
+            if(bullet.y > can.height){
+                bullet.y = 0
+            }
+            if(bullet.x < 0){
+                bullet.x = can.width;
+            }
+            if(bullet.y < 0){
+                bullet.y = can.height;
+            }
+
+
+            
+            ctx.fillStyle = "rgb(134, 121, 121)";
+            ctx.fillRect(bullet.x-2, bullet.y-2, bullet.width+4, bullet.height+4);
+
+
+
+            if(currFrame%100 == 0){
+                if(obj.bulletSprite == 0){
+                    ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
+                    obj.bulletSprite = 1;
+                }else{
+                    ctx.fillStyle = "rgb(10, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
+                    obj.bulletSprite = 0;
+                }
+            }
+            ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
+            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            if(bullet.decayTime < 0){
+                bullet.alive = false;
+                obj.bullets.shift(); //żeby usuwało zabite kule
+            }
+        }
+    });
+}
 
 function DrawBullets(){
     ship.bullets.forEach(bullet => {
@@ -587,8 +662,11 @@ function DrawBullets(){
             if(bullet.firstFrame){
                 bullet.maxDecay = bullet.decayTime;
 
-                bullet.dx = mouse.x - bullet.x;
-                bullet.dy = mouse.y - bullet.y;
+                bullet.x -= bullet.width/2;
+                bullet.y -= bullet.height/2 ;
+
+                bullet.dx = mouse.x - bullet.x  - bullet.width/2;
+                bullet.dy = mouse.y - bullet.y - bullet.height/2 ;
                 bullet.distance = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
                 bullet.speedX = (bullet.dx / bullet.distance) * bullet.speed;
                 bullet.speedY = (bullet.dy / bullet.distance) * bullet.speed;
