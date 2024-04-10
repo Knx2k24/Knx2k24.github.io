@@ -1,8 +1,9 @@
-//w sali
+//w sali 2
 let debugMode = true;
 
 const gameState = {
     play: false,
+    hardmode: false,
     over: false,
     pause: false
 }
@@ -58,6 +59,16 @@ const ship = {
     mines: []
 };
 
+const base = {
+    x: canvas.width/2 -50,
+    y: canvas.height/2 -50,
+    width: 100,
+    height: 100,
+    hp: 200,
+    alive: true
+}
+
+
 
 
 
@@ -78,6 +89,11 @@ window.addEventListener('keydown', e => {
     if(e.key == "x"){
         debugMode = !debugMode;
     }
+
+    if(e.key = "z" && debugMode){
+        base.hp -= 10;
+    }
+
 });
 window.addEventListener('keyup', e => {
     keys[e.key] = false;
@@ -98,7 +114,7 @@ canvas.addEventListener("mousemove", function(e) {
 });
 
 canvas.addEventListener("mousedown", function(e){
-    console.log(e)
+    
     if(e.buttons == 1){
         mouse.leftClick = true;
     }
@@ -115,6 +131,11 @@ canvas.addEventListener("mouseup", function(){
 let maxRocks = 12;
 let spawnrateRocks = 200;
 let rocksDiffi = 5;
+
+let maxShooter = 3;
+let spawnrateShooter = 400;
+let shooterDiffi = 2;
+
 function update(timestamp) {
     //obliczanie czasu od ostatniej klatki. Jeżeli gra będzie wolniej/szybciej updatować to "silnik" nie będzie działał szybciej/wolniej
     currFrame++;
@@ -130,6 +151,7 @@ function update(timestamp) {
         if(ship.mineDelay != 0){
             ship.mineDelay--;
         }
+        DrawBase();
         DrawShip();
         DrawBullets();
         DrawShooter();
@@ -138,7 +160,10 @@ function update(timestamp) {
         DrawCrosshair();
         
         if(currFrame%spawnrateRocks == 0 && rocks.length < maxRocks){
-            SpawnWave(getRandomInt(rocksDiffi));
+            SpawnWave(getRandomInt(rocksDiffi), "rock");
+        }
+        if(currFrame%spawnrateShooter == 0 && shooters.length < maxShooter){
+            SpawnWave(getRandomInt(shooterDiffi), "shooter");
         }
 
     }
@@ -151,6 +176,9 @@ function update(timestamp) {
     setTimeout(() => {
         ctx.clearRect(0, 0, can.width, can.height);
         ctx.fillStyle = "rgb(10, 10, 10)";
+        if(gameState.hardmode){
+            ctx.fillStyle = "rgb(50, 10, 10)";
+        }
         ctx.fillRect(0, 0, can.width, can.height);
         requestAnimationFrame(update);
     }, fps);
@@ -163,9 +191,12 @@ function RestartGame(){
     ship.bullets = [];
     ship.mines = [];
     rocks = [];
+    shooters = [];
     gameState.play = true;
     gameState.over = false;
     gameState.pause = false;
+    gameState.hardmode = false;
+    base.hp = 200;
     ship.hp = 100;
     ship.lives = 3;
     ship.score = 0;
@@ -217,6 +248,7 @@ function DrawDebugInfo(){
     ctx.fillText("sY: " + ship.y.toFixed(4),10,350);
     ctx.fillText("sHP: " + ship.hp, 10, 400)
     ctx.fillText("sLiv: " + ship.lives, 10, 450)
+    ctx.fillText("bHp: " + base.hp, 10, 500)
     ctx.fillText("mX: " + mouse.x,800,50);
     ctx.fillText("mY: " + mouse.y,800,100);
     ctx.fillText("lClick: " + mouse.leftClick,1200,50);
@@ -227,6 +259,7 @@ function DrawDebugInfo(){
     ctx.fillText("play: " + gameState.play, 1600, 50)
     ctx.fillText("over: " + gameState.over, 1600, 100)
     ctx.fillText("pause: " + gameState.pause, 1600, 150)
+    ctx.fillText("hard: " + gameState.hardmode, 1600, 200)
     ctx.fillText("Rdiffi: " + rocksDiffi, 1900, 50)
     ctx.fillText("RspawnRate: " + spawnrateRocks, 1901, 100)
     
@@ -360,19 +393,36 @@ const tL = {x:0, y: 0};
 const tR = {x:can.width, y:0};
 const bL = {x: 0, y: can.height};
 const bR = {x:can.width, y:can.height};
-function SpawnWave(numEnemy){
-    
-    for(let i = 0; i < numEnemy; ++i){
-        let random = getRandomInt(4)
-    
-        if(random == 0){
-            SpawnEnemy(tL.x, tL.y, "rock")
-        }else if(random == 1){
-            SpawnEnemy(tR.x, tR.y, "rock")
-        }else if(random == 2){
-            SpawnEnemy(bL.x, bL.y, "rock")
-        }else if(random == 3){
-            SpawnEnemy(bR.x, bR.y, "rock")
+function SpawnWave(numEnemy, type){    
+    if(type == "rock"){
+        for(let i = 0; i < numEnemy; ++i){
+            let random = getRandomInt(4)
+        
+            if(random == 0){
+                SpawnEnemy(tL.x, tL.y, type)
+            }else if(random == 1){
+                SpawnEnemy(tR.x, tR.y, type)
+            }else if(random == 2){
+                SpawnEnemy(bL.x, bL.y, type)
+            }else if(random == 3){
+                SpawnEnemy(bR.x, bR.y, type)
+            }
+        }
+    }
+
+    if(type == "shooter"){
+        for(let i = 0; i < numEnemy; ++i){
+            let random = getRandomInt(4)
+        
+            if(random == 0){
+                SpawnEnemy(tL.x, tL.y, type)
+            }else if(random == 1){
+                SpawnEnemy(tR.x, tR.y, type)
+            }else if(random == 2){
+                SpawnEnemy(bL.x, bL.y, type)
+            }else if(random == 3){
+                SpawnEnemy(bR.x, bR.y, type)
+            }
         }
     }
 }
@@ -441,7 +491,7 @@ function DrawShooter(){
             shooter.dx = ship.x - shooter.x + getRandomArbitrary(-400, 400);
             shooter.dy = ship.y - shooter.y + getRandomArbitrary(-400, 400);
             shooter.distance = Math.sqrt(shooter.dx * shooter.dx + shooter.dy * shooter.dy);
-            console.log(shooter.distance)
+           
             if(shooter.distance > shooter.followDistance){
                 shooter.speedX = (shooter.dx / shooter.distance) * shooter.speed;
                 shooter.speedY = (shooter.dy / shooter.distance) * shooter.speed;
@@ -520,10 +570,32 @@ function DrawShooter(){
                 shooter.alive = false;
             } 
         }
+        else{
+            shooters.splice(shooters.indexOf(shooter), 1);
+        }
     })
 }
 
+function DrawBase(){
 
+    if(base.alive){
+        ctx.fillStyle = "rgb(10, 10, 255)";
+        ctx.fillRect(base.x-2, base.y-2, base.width+4, base.height+4);
+    
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(base.x, base.y, base.width, base.height);
+    
+        ctx.fillStyle = "rgb(10, 10, 255, "+base.hp/base.maxHp+")";
+        ctx.fillRect(base.x, base.y, base.width, base.height);
+        if(base.hp <= 0){
+            base.alive = false;
+        }
+    }else{
+        gameState.hardmode = true;
+    }
+
+
+}
 
 
 function DrawRocks(){
@@ -563,7 +635,12 @@ function DrawRocks(){
                 rock.hp = 0;
                 ship.hp -= 20;
                 checkLives();
-                
+            }
+
+            if (Collision(base, rock) && !(gameState.hardmode)) {
+                rock.hp = 0;
+                base.hp -= 20;
+                checkLives();
             }
 
             if(rock.x > can.width){
