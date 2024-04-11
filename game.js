@@ -1,5 +1,7 @@
-//w sali 2
+//w sali 3 hp
 let debugMode = true;
+
+let scoreModifier = 1;
 
 const gameState = {
     play: false,
@@ -51,12 +53,14 @@ const ship = {
     score: 0,
     lives: 3,
     hp: 100,
+    maxHp: 100,
     bulletFireSpeed: 20,
     mineFireSpeed: 20,
     bulletDelay: 0,
     mineDelay: 0,
     bullets: [],
-    mines: []
+    mines: [],
+    recentlyHit: false
 };
 
 const base = {
@@ -64,6 +68,7 @@ const base = {
     y: canvas.height/2 -50,
     width: 100,
     height: 100,
+    maxHp: 200,
     hp: 200,
     alive: true
 }
@@ -90,9 +95,6 @@ window.addEventListener('keydown', e => {
         debugMode = !debugMode;
     }
 
-    if(e.key = "z" && debugMode){
-        base.hp -= 10;
-    }
 
 });
 window.addEventListener('keyup', e => {
@@ -158,7 +160,12 @@ function update(timestamp) {
         DrawMines();
         DrawRocks();
         DrawCrosshair();
-        
+        DrawScore(0);
+        DrawHearts();
+
+
+        checkLives();
+
         if(currFrame%spawnrateRocks == 0 && rocks.length < maxRocks){
             SpawnWave(getRandomInt(rocksDiffi), "rock");
         }
@@ -175,14 +182,49 @@ function update(timestamp) {
 
     setTimeout(() => {
         ctx.clearRect(0, 0, can.width, can.height);
-        ctx.fillStyle = "rgb(10, 10, 10)";
         if(gameState.hardmode){
             ctx.fillStyle = "rgb(50, 10, 10)";
+        }else{
+            ctx.fillStyle = "rgb(10, 10, 10)";
         }
         ctx.fillRect(0, 0, can.width, can.height);
         requestAnimationFrame(update);
     }, fps);
 
+}
+
+let heartOffset = 120
+function DrawHearts(){
+    ctx.fillStyle = 'white';
+    ctx.font = "80px Sans";
+
+    for(let i = 1; i < ship.lives + 1; ++i){
+        ctx.fillText("❤️",can.width - heartOffset *i,80);
+    }
+}
+
+function DrawScore(delta){
+    
+    if(gameState.hardmode){
+        scoreModifier = 0.5;
+    }
+    
+    
+    if(delta > 0){
+        ship.score += (delta * scoreModifier);
+    }else{
+        ship.score += delta;
+    }
+
+    if(ship.score < 0){
+        ship.score = 0;    
+    }
+    
+    
+    
+    ctx.fillStyle = 'white';
+    ctx.font = "80px Sans";
+    ctx.fillText("SCORE: " + parseInt(ship.score),20,80);
 }
 
 function RestartGame(){
@@ -192,14 +234,15 @@ function RestartGame(){
     ship.mines = [];
     rocks = [];
     shooters = [];
+    base.hp = 200;
+    base.alive = true;
+    ship.hp = 100;
+    ship.lives = 3;
+    ship.score = 0;
     gameState.play = true;
     gameState.over = false;
     gameState.pause = false;
     gameState.hardmode = false;
-    base.hp = 200;
-    ship.hp = 100;
-    ship.lives = 3;
-    ship.score = 0;
 }
 
 
@@ -222,7 +265,24 @@ function DrawCrosshair(){
 }
 
 let XOffset, YOffset;
+let flashStart = 0;
 function DrawShip(){
+    
+    DrawHp(ship);
+    
+    if(ship.recentlyHit == true){
+        flashStart = 10;
+        
+        ship.recentlyHit = false;
+    }
+
+    if(flashStart != 0){
+        if(currFrame%20 == 0){
+            ctx.fillText("HIT!",ship.x,ship.y);
+            flashStart--;
+        }
+    }
+
     const shipImage = new Image();
     shipImage.src = 'ship.png';
     
@@ -295,6 +355,9 @@ function MoveShip(){
     }
     if(debugMode && keys["f"] && currFrame%10 == 0){
         SpawnEnemy(500, 500, "shooter")
+    }
+    if(debugMode && keys["z"] && currFrame%10 == 0){
+        base.hp -= 10;
     }
     if(debugMode && keys["q"] && currFrame%10 == 0){
         SpawnWave(1)
@@ -517,7 +580,7 @@ function DrawShooter(){
                 if (Collision(bullet, ship)) {
                     ship.hp -= bullet.dmg;
                     shooter.bullets.splice(bulletIndex, 1);
-                    
+                    ship.recentlyHit = true;
                 }
             })
         
@@ -530,7 +593,7 @@ function DrawShooter(){
             })
 
             ship.mines.forEach((mine, mineIndex) => {
-                if (Collision(mine, rock)) {
+                if (Collision(mine, shooter)) {
                     shooter.hp -= mine.dmg;
                     ship.mines.splice(mineIndex, 1);
                     
@@ -540,7 +603,8 @@ function DrawShooter(){
             if (Collision(ship, shooter)) {
                 shooter.hp = 0;
                 ship.hp -= 35;
-                checkLives();
+                DrawScore(-40);
+                ship.recentlyHit = true;
             }
 
             if(shooter.x > can.width){
@@ -571,6 +635,7 @@ function DrawShooter(){
             } 
         }
         else{
+            ship.score += 50 * scoreModifier;
             shooters.splice(shooters.indexOf(shooter), 1);
         }
     })
@@ -579,6 +644,7 @@ function DrawShooter(){
 function DrawBase(){
 
     if(base.alive){
+        DrawHp(base);
         ctx.fillStyle = "rgb(10, 10, 255)";
         ctx.fillRect(base.x-2, base.y-2, base.width+4, base.height+4);
     
@@ -595,6 +661,29 @@ function DrawBase(){
     }
 
 
+}
+
+function DrawHp(obj){
+    if(obj == base){
+        
+
+        ctx.fillStyle = "rgb(255, 255, 255)";
+        ctx.fillRect(obj.x -2, obj.y + 120 -2, 100 +4, 20 +4);
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(obj.x -1, obj.y + 120 -1, 100 +2, 20 +2);
+        
+        ctx.fillStyle = "rgb(255, 10, 10)";
+        ctx.fillRect(obj.x, obj.y + 120, 100* obj.hp/obj.maxHp, 20)
+    }else{
+
+        ctx.fillStyle = "rgb(255, 255, 255)";
+        ctx.fillRect(obj.x -50 -2, obj.y + obj.height - 10 -2, 100 +4, 20 +4);
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(obj.x -50 -1, obj.y + obj.height - 10 -1, 100 +2, 20 +2);
+
+        ctx.fillStyle = "rgb(255, 10, 10)";
+        ctx.fillRect(obj.x -50, obj.y + obj.height - 10, 100* obj.hp/obj.maxHp, 20);
+    }
 }
 
 
@@ -620,27 +709,27 @@ function DrawRocks(){
                 if (Collision(bullet, rock)) {
                     rock.hp -= bullet.dmg;
                     ship.bullets.splice(bulletIndex, 1);
-                    
                 }
             })
             ship.mines.forEach((mine, mineIndex) => {
                 if (Collision(mine, rock)) {
                     rock.hp -= mine.dmg;
                     ship.mines.splice(mineIndex, 1);
-                    
                 }
             })
-
+            
             if (Collision(ship, rock)) {
                 rock.hp = 0;
                 ship.hp -= 20;
-                checkLives();
+                DrawScore(-40);
+                ship.recentlyHit = true;
             }
 
             if (Collision(base, rock) && !(gameState.hardmode)) {
                 rock.hp = 0;
                 base.hp -= 20;
-                checkLives();
+                DrawScore(-80);
+                ship.recentlyHit = true;
             }
 
             if(rock.x > can.width){
@@ -669,6 +758,7 @@ function DrawRocks(){
                 rock.alive = false;
             }
         }else{
+            DrawScore(10);
             rocks.splice(rocks.indexOf(rock), 1);
         }
     })
