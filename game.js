@@ -36,6 +36,8 @@ if(can){
 function OnLoad(){
     requestAnimationFrame(update);
     gameState.play = true;
+
+    atestAudio = new Audio('testAudio.mp3');
 }
 
 
@@ -70,7 +72,8 @@ const base = {
     height: 100,
     maxHp: 200,
     hp: 200,
-    alive: true
+    alive: true,
+    recentlyHit: false
 }
 
 
@@ -95,6 +98,9 @@ window.addEventListener('keydown', e => {
         debugMode = !debugMode;
     }
 
+    if(e.key == "v" &&debugMode){
+        atestAudio.play();
+    }
 
 });
 window.addEventListener('keyup', e => {
@@ -166,11 +172,13 @@ function update(timestamp) {
 
         checkLives();
 
-        if(currFrame%spawnrateRocks == 0 && rocks.length < maxRocks){
-            SpawnWave(getRandomInt(rocksDiffi), "rock");
-        }
-        if(currFrame%spawnrateShooter == 0 && shooters.length < maxShooter){
-            SpawnWave(getRandomInt(shooterDiffi), "shooter");
+        if(!gameState.pause){
+            if(currFrame%spawnrateRocks == 0 && rocks.length < maxRocks){
+                SpawnWave(getRandomInt(rocksDiffi), "rock");
+            }
+            if(currFrame%spawnrateShooter == 0 && shooters.length < maxShooter){
+                SpawnWave(getRandomInt(shooterDiffi), "shooter");
+            }
         }
 
     }
@@ -265,30 +273,37 @@ function DrawCrosshair(){
 }
 
 let XOffset, YOffset;
-let flashStart = 0;
+let shipStatusDamageStart = 0;
 function DrawShip(){
-    
     DrawHp(ship);
     
+
+    //Pokazywanie efektu po trafieniu w statek
+    //to jest absolutie głupio napisane, ale działa
     if(ship.recentlyHit == true){
-        flashStart = 10;
+        shipStatusDamageStart = 10;
         
         ship.recentlyHit = false;
     }
 
-    if(flashStart != 0){
+    if(shipStatusDamageStart != 0){
         if(currFrame%20 == 0){
             ctx.fillText("HIT!",ship.x,ship.y);
-            flashStart--;
+            shipStatusDamageStart--;
         }
     }
 
+
+    //deklaracja zdjęcia użytego do pokazywania statku
     const shipImage = new Image();
     shipImage.src = 'ship.png';
     
     //kontrola rotacjii statku
    
-    //najpierw zmieniamy punk 0:0 canvasu, obracamy o tyle ile jest obrotu statku, rysujemy statek a później odwracamy tak jak było
+    /*najpierw zmieniamy punk 0:0 canvasu na koordynaty statku, obracamy o tyle ile jest obrotu statku, 
+    rysujemy statek a później odwracamy tak jak było na początku
+    Bez tego to statek obracał się według punktu 0:0 więc duże kółka robił wokół lewego górnego rogu
+    */
     
     ctx.translate(ship.x, ship.y)
     ctx.rotate(ToRads(ship.rotation))
@@ -298,6 +313,7 @@ function DrawShip(){
 }
 
 function DrawDebugInfo(){
+    //Wyświetl info do debugowania
     ctx.fillStyle = 'gray';
     ctx.font = "60px Arial";
     ctx.fillText("deltaTime: " + deltaTime.toFixed(4),10,50);
@@ -324,10 +340,11 @@ function DrawDebugInfo(){
     ctx.fillText("RspawnRate: " + spawnrateRocks, 1901, 100)
     
     ctx.fillText("DEBUG MODE ON| press: e = spawnRock, r = restart, q = spawnWave, x = toggleDebug", 10, 1400)
+    ctx.fillText("f = spawnShooter, z = damageBase, v = audioTest", 10, 1450)
 }
 
 function MoveShip(){
-    if(!gameState.pause){
+    if(!gameState.pause){ //Obracaj statek za pomocą matematyki której ledwo rozumiem i obsługuj poruszanie się statku
         ship.rotation = ToDeg(Math.atan2(mouse.x - ship.x, - (mouse.y - ship.y)));
         if(keys["ArrowLeft"] || keys["a"]){
             ship.xAcc += -ship.speed * deltaTime;
@@ -350,6 +367,8 @@ function MoveShip(){
         }
     }
 
+
+    //Dałem to tutaj, ponieważ funkcja MoveShip jest wykonywana w update i mogę przytrzymać klawisz jak chce
     if(debugMode && keys["e"] && currFrame%10 == 0){
         SpawnEnemy(500, 500, "rock")
     }
@@ -368,12 +387,14 @@ function MoveShip(){
 
     
 
-
+    //obsługa akceleracjii. Jest mnożona przez 0.9, żeby spadała z czasem
     ship.xAcc *= 0.9;
     ship.yAcc *= 0.9;
     ship.x += ship.xAcc;
     ship.y += ship.yAcc;
 
+
+    //jeżeli statek jest poza canvasem, to teleportuj na drugą stronę tak jak w asteoridach
     if(ship.x > can.width){
         ship.x = 0
     }
@@ -388,7 +409,8 @@ function MoveShip(){
     }
 }
 
-function FireBullet(type, obj) {
+
+function FireBullet(type, obj, directionOverrideX, directionOverrideY) { //funkcja od tworzenia pocisków
     if(type=="ship" && ship.bulletDelay == 0){
         const bullet = {
             x: ship.x ,
@@ -397,8 +419,8 @@ function FireBullet(type, obj) {
             width: 20,
             height: 20,
             rotation: ship.rotation,
-            decayTime: 100,
-            maxDecay: 0,
+            decayTime: 100, //czas w klatkach po którym zniknie
+            maxDecay: 100, //czas w klatkach po którym zniknie(stała)
             firstFrame: true,
             alive: true,
             dx: 0,
@@ -406,10 +428,11 @@ function FireBullet(type, obj) {
             distance: 0,
             speedX: 0,
             speedY: 0,
-            dmg: 25
+            dmg: 25,
+            spawnedFromMine: false
         };
         ship.bullets.push(bullet);
-        ship.bulletDelay = ship.bulletFireSpeed;
+        ship.bulletDelay = ship.bulletFireSpeed; //dodanie opóźnienia, żeby statek nie strzelał co klatkę
     }else if(type == "shooter" && obj.bulletDelay == 0){
         const bullet = {
             x: obj.x + obj.width/2,
@@ -430,20 +453,41 @@ function FireBullet(type, obj) {
         };
         obj.bullets.push(bullet);
         obj.bulletDelay = obj.bulletFireSpeed;
+    }else if(type == "mine"){
+        const bullet = {
+            x: obj.x + obj.width/2,
+            y: obj.y + obj.height/2,
+            speed: 10,
+            width: 15,
+            height: 15,
+            decayTime: 150,
+            maxDecay: 150,
+            firstFrame: true,
+            alive: true,
+            dx: directionOverrideX,
+            dy: directionOverrideY,
+            distance: 0,
+            speedX: 0,
+            speedY: 0,
+            dmg: 10,
+            spawnedFromMine: true
+        };
+        ship.bullets.push(bullet);
     }
 }
 
 function FireMine() {
-    if(ship.mineDelay == 0){
+    if(ship.mineDelay == 0 && ship.mines.length < 5){
         const mine = {
             x: ship.x ,
             y: ship.y ,
             width: 40,
             height: 40,
             decayTime: 500,
-            maxDecay: 0,
+            maxDecay: 500,
             firstFrame: true,
             alive: true,
+            exploded: false,
             dmg: 100
         };
         ship.mines.push(mine);
@@ -451,14 +495,14 @@ function FireMine() {
     }
 }
 
-
+//tutaj zadeklaorwane są koordynaty rogów ekranu. Stąd pojawiają się asteoridy i inne
 const tL = {x:0, y: 0};
 const tR = {x:can.width, y:0};
 const bL = {x: 0, y: can.height};
 const bR = {x:can.width, y:can.height};
 function SpawnWave(numEnemy, type){    
     if(type == "rock"){
-        for(let i = 0; i < numEnemy; ++i){
+        for(let i = 0; i < numEnemy; ++i){ //losuje się z jakiego miejsca mają się pojawić rzeczy
             let random = getRandomInt(4)
         
             if(random == 0){
@@ -501,14 +545,14 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             width: 90,
             height: 90,
             sprite: 0,
-            maxHp: 100,
-            hp: 100,
+            maxHp: 100, //stała ilości zdrowia
+            hp: 100, //zmienna ilości zdrowia
             firstFrame: true,
             alive: true,
-            dx: 0,
-            dy: 0,
-            distance: 0,
-            speedX: 0,
+            dx: 0, //różnica dystansu od bazy w osi x
+            dy: 0, //różnica dystansu od bazy w osi y
+            distance: 0, //dystans od bazy w pierwszej klatce życia asteoridy
+            speedX: 0, 
             speedY: 0,
         }
         rocks.push(rock)
@@ -529,15 +573,13 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             distance: 0,
             speedX: 0,
             speedY: 0,
-            followDistance: 1000,
-            bullets: [],
+            followDistance: 500 * scale, //maxymalny dystans podążania za graczem
+            bullets: [], 
             bulletDmg: 10,
-            bulletFireSpeed: 0,
-            bulletDelay: 0,
             bulletFireSpeed: 100,
             bulletDelay: 0,
             tag: "enemy",
-            bulletSprite: 0,
+            bulletSprite: 0, //czego użyć do pokazania pocisku
         }
         shooters.push(shooter)
     }
@@ -551,19 +593,19 @@ function DrawShooter(){
                 shooter.firstFrame = false;
             }
 
-            shooter.dx = ship.x - shooter.x + getRandomArbitrary(-400, 400);
-            shooter.dy = ship.y - shooter.y + getRandomArbitrary(-400, 400);
+            shooter.dx = ship.x - shooter.x; //kalkulacje związanie z obliczaniem położenia shootera względem statku
+            shooter.dy = ship.y - shooter.y;
             shooter.distance = Math.sqrt(shooter.dx * shooter.dx + shooter.dy * shooter.dy);
            
             if(shooter.distance > shooter.followDistance){
-                shooter.speedX = (shooter.dx / shooter.distance) * shooter.speed;
-                shooter.speedY = (shooter.dy / shooter.distance) * shooter.speed;
+                shooter.speedX = (shooter.dx / shooter.distance) * shooter.speed; 
+                shooter.speedY = (shooter.dy / shooter.distance) * shooter.speed; //dodaj prędkość w kierunku gracza
             }else{
                 shooter.speedX = 0;
                 shooter.speedY = 0;
+                FireBullet("shooter", shooter); //stań w miejscu i strzelaj do gracza
                 
             }
-            FireBullet("shooter", shooter);
             DrawEnemyBullets(shooter);
             
 
@@ -574,12 +616,13 @@ function DrawShooter(){
                 if(shooter.bulletDelay != 0){
                     shooter.bulletDelay--;
                 }
+                //zmień położenie jeżeli nie ma pauzy i przeładuj
             }
             
             shooter.bullets.forEach((bullet, bulletIndex) => {
                 if (Collision(bullet, ship)) {
                     ship.hp -= bullet.dmg;
-                    shooter.bullets.splice(bulletIndex, 1);
+                    shooter.bullets.splice(bulletIndex, 1); //usuń kulę, która trafiła
                     ship.recentlyHit = true;
                 }
             })
@@ -587,37 +630,22 @@ function DrawShooter(){
             ship.bullets.forEach((bullet, bulletIndex) => {
                 if (Collision(bullet, shooter)) {
                     shooter.hp -= bullet.dmg;
-                    ship.bullets.splice(bulletIndex, 1);
-                    
+                    ship.bullets.splice(bulletIndex, 1); //usuń kulę, która trafiła
                 }
             })
 
-            ship.mines.forEach((mine, mineIndex) => {
+            ship.mines.forEach((mine) => {
                 if (Collision(mine, shooter)) {
                     shooter.hp -= mine.dmg;
-                    ship.mines.splice(mineIndex, 1);
-                    
+                    mine.alive = false;
                 }
             })
             
             if (Collision(ship, shooter)) {
                 shooter.hp = 0;
                 ship.hp -= 35;
-                DrawScore(-40);
+                DrawScore(-10);
                 ship.recentlyHit = true;
-            }
-
-            if(shooter.x > can.width){
-                shooter.x = 0
-            }
-            if(shooter.y > can.height){
-                shooter.y = 0
-            }
-            if(shooter.x < 0){
-                shooter.x = can.width;
-            }
-            if(shooter.y < 0){
-                shooter.y = can.height;
             }
             
 
@@ -635,29 +663,44 @@ function DrawShooter(){
             } 
         }
         else{
-            ship.score += 50 * scoreModifier;
+            DrawScore(50);
             shooters.splice(shooters.indexOf(shooter), 1);
         }
     })
 }
 
+let baseStatusDamageStart = 0;
 function DrawBase(){
-
+    const baseImage = new Image();
+    const baseImageHit = new Image();
+    baseImage.src = 'school.png';
+    baseImageHit.src = "schoolHit.png";
     if(base.alive){
         DrawHp(base);
-        ctx.fillStyle = "rgb(10, 10, 255)";
-        ctx.fillRect(base.x-2, base.y-2, base.width+4, base.height+4);
-    
-        ctx.fillStyle = "rgb(0, 0, 0)";
-        ctx.fillRect(base.x, base.y, base.width, base.height);
-    
-        ctx.fillStyle = "rgb(10, 10, 255, "+base.hp/base.maxHp+")";
-        ctx.fillRect(base.x, base.y, base.width, base.height);
+        ctx.drawImage(baseImage, base.x, base.y, base.width, base.height);
         if(base.hp <= 0){
             base.alive = false;
+            aElectroErrorHeavy = new Audio('aElectroErrorHeavy.wav');
+            aElectroErrorHeavy.play();
         }
+
+        if(base.recentlyHit){
+            baseStatusDamageStart = 10;
+            
+            base.recentlyHit = false;
+        }
+    
+        if(baseStatusDamageStart != 0){
+            if(currFrame%20 == 0){
+                ctx.drawImage(baseImageHit, base.x, base.y, base.width, base.height);
+                ctx.fillText("⚡‼",base.x,base.y);
+                baseStatusDamageStart--;
+            }
+        }
+
     }else{
         gameState.hardmode = true;
+        
     }
 
 
@@ -666,6 +709,7 @@ function DrawBase(){
 function DrawHp(obj){
     if(obj == base){
         
+        //nie wiem dlaczego baza jakoś inaczej pokazuje zdrowie ale działa w taki sposób
 
         ctx.fillStyle = "rgb(255, 255, 255)";
         ctx.fillRect(obj.x -2, obj.y + 120 -2, 100 +4, 20 +4);
@@ -694,9 +738,12 @@ function DrawRocks(){
                 rock.dx = can.width/2 - rock.x + getRandomArbitrary(-400, 400);
                 rock.dy = can.height/2 - rock.y + getRandomArbitrary(-400, 400);
                 rock.distance = Math.sqrt(rock.dx * rock.dx + rock.dy * rock.dy);
-                rock.speedX = (rock.dx / rock.distance) * rock.speed * getRandomArbitrary(-1.5, 1.5);
-                rock.speedY = (rock.dy / rock.distance) * rock.speed * getRandomArbitrary(-1.5, 1.5);
+                rock.speedX = (rock.dx / rock.distance) * rock.speed * getRandomArbitrary(-2.5, 2.5);
+                rock.speedY = (rock.dy / rock.distance) * rock.speed * getRandomArbitrary(-2.5, 2.5);
                 rock.firstFrame = false;
+
+                //w pierwszej klatce, pojaw się i miej losowy offset kierunku żeby nie lecieć w pierwszej linii.
+                //miej także losową prędkość
             }
 
             if(!gameState.pause){
@@ -714,24 +761,27 @@ function DrawRocks(){
             ship.mines.forEach((mine, mineIndex) => {
                 if (Collision(mine, rock)) {
                     rock.hp -= mine.dmg;
-                    ship.mines.splice(mineIndex, 1);
+                    mine.alive = false;
                 }
             })
             
             if (Collision(ship, rock)) {
                 rock.hp = 0;
                 ship.hp -= 20;
-                DrawScore(-40);
+                DrawScore(-10);
                 ship.recentlyHit = true;
             }
 
             if (Collision(base, rock) && !(gameState.hardmode)) {
                 rock.hp = 0;
                 base.hp -= 20;
-                DrawScore(-80);
-                ship.recentlyHit = true;
+                DrawScore(-20);
+                base.recentlyHit = true;
+                aElectroError = new Audio('aElectroError.wav');
+                aElectroError.play();
             }
 
+            //teleportuj na drugą stronę jak wyjdziesz poza granice jak w mario
             if(rock.x > can.width){
                 rock.x = 0
             }
@@ -804,16 +854,18 @@ function DrawEnemyBullets(obj){
 
 
 
-            if(currFrame%100 == 0){
-                if(obj.bulletSprite == 0){
-                    ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
-                    obj.bulletSprite = 1;
-                }else{
-                    ctx.fillStyle = "rgb(10, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
-                    obj.bulletSprite = 0;
-                }
+            if(currFrame%40 == 0){
+                obj.bulletSprite = obj.bulletSprite == 1 ? 0 : 1;
+                //jeżeli sprite pocisku jest równy 1: ustaw na 0 i jeżeli 0: ustaw na 1
             }
-            ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
+            
+            if(obj.bulletSprite == 0){
+                ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
+                
+            }else{
+                ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
+                
+            }
             ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             if(bullet.decayTime < 0){
                 bullet.alive = false;
@@ -827,16 +879,23 @@ function DrawBullets(){
     ship.bullets.forEach(bullet => {
         if(bullet.alive){
             if(bullet.firstFrame){
-                bullet.maxDecay = bullet.decayTime;
+                if(!bullet.spawnedFromMine){
+                    bullet.x -= bullet.width/2;
+                    bullet.y -= bullet.height/2 ;
+    
+                    bullet.dx = mouse.x - bullet.x  - bullet.width/2;
+                    bullet.dy = mouse.y - bullet.y - bullet.height/2 ;
+                    bullet.distance = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
+                    bullet.speedX = (bullet.dx / bullet.distance) * bullet.speed;
+                    bullet.speedY = (bullet.dy / bullet.distance) * bullet.speed;
+                    
+                }else{
+                    bullet.distance = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
+                    bullet.speedX = (bullet.dx / bullet.distance) * bullet.speed * getRandomArbitrary(-1.2, 1.2);
+                    bullet.speedY = (bullet.dy / bullet.distance) * bullet.speed * getRandomArbitrary(-1.2, 1.2);
+                }
 
-                bullet.x -= bullet.width/2;
-                bullet.y -= bullet.height/2 ;
 
-                bullet.dx = mouse.x - bullet.x  - bullet.width/2;
-                bullet.dy = mouse.y - bullet.y - bullet.height/2 ;
-                bullet.distance = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
-                bullet.speedX = (bullet.dx / bullet.distance) * bullet.speed;
-                bullet.speedY = (bullet.dy / bullet.distance) * bullet.speed;
                 bullet.firstFrame = false;
             }
 
@@ -860,12 +919,14 @@ function DrawBullets(){
             }
 
             
-
             ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
+            if(bullet.spawnedFromMine){
+                ctx.fillStyle = "rgb(255, 150, 0, "+bullet.decayTime/bullet.maxDecay+")";
+            }
             ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             if(bullet.decayTime < 0){
                 bullet.alive = false;
-                ship.bullets.shift(); //żeby usuwało zabite kule
+                ship.bullets.shift(); //żeby usuwało kule które już umarły ze starości
             }
         }
     });
@@ -887,11 +948,32 @@ function DrawMines(){
                 mine.decayTime--;
             }
             
+            mine.alive = mine.decayTime < 0 ? false : true;
+            
+        }else{
+
+            //to jest absolutne spaghetti, ale działa
+            //pojaw pociski od "wybuchu" lewo, prawo, góra, dół
+            FireBullet("mine", mine, 0, 1);
+            FireBullet("mine", mine, 1, 0);
+            FireBullet("mine", mine, 0, -1);
+            FireBullet("mine", mine, -1, 0);
+            
+            //pojaw pociski od "wybuchu" na ukosy wszystkie
+            FireBullet("mine", mine, 1, 1);
+            FireBullet("mine", mine, -1, 1);
+            FireBullet("mine", mine, 1, -1);
+            FireBullet("mine", mine, -1, -1);
+            
+            aBoom = new Audio('aBoom.wav');
+            aBoom.play();
+            
             if(mine.decayTime < 0){
-                mine.alive = false;
-                ship.mines.shift(); //żeby usuwało zabite kule
+                ship.mines.shift(); 
             }
-        }
+
+            ship.mines.splice(ship.mines.indexOf(mine), 1)
+        }   
     });
 }
 
