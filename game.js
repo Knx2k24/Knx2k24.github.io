@@ -7,7 +7,9 @@ const gameState = {
     play: false,
     hardmode: false,
     over: false,
-    pause: false
+    pause: false,
+    globalDiff: 1,
+    unpausedCounter: 0
 }
 //Iniclaizacjia elementów
 const can = document.getElementById("canvas");
@@ -62,7 +64,8 @@ const ship = {
     mineDelay: 0,
     bullets: [],
     mines: [],
-    recentlyHit: false
+    recentlyHit: false,
+    hasShield: false
 };
 
 const base = {
@@ -73,7 +76,9 @@ const base = {
     maxHp: 200,
     hp: 200,
     alive: true,
-    recentlyHit: false
+    recentlyHit: false,
+    pickups: [],
+    hasShield: false
 }
 
 
@@ -90,6 +95,7 @@ const keys = [];
 window.addEventListener('keydown', e => {
     keys[e.key] = true;
 
+    console.log(e.key)
     if(e.key == "Escape"){
         gameState.pause = !gameState.pause;
     }
@@ -98,8 +104,22 @@ window.addEventListener('keydown', e => {
         debugMode = !debugMode;
     }
 
-    if(e.key == "v" &&debugMode){
+    if(e.key == "v" && debugMode){
         atestAudio.play();
+    }
+
+    if(e.key == "`" && debugMode){
+        gameState.globalDiff = 0
+    }
+
+    if(e.key == "1" && debugMode){
+        gameState.globalDiff = 1
+    }
+    if(e.key == "2" && debugMode){
+        gameState.globalDiff = 2
+    }
+    if(e.key == "3" && debugMode){
+        gameState.globalDiff = 3
     }
 
 });
@@ -144,6 +164,10 @@ let maxShooter = 3;
 let spawnrateShooter = 400;
 let shooterDiffi = 2;
 
+let maxZoomer = 2;
+let spawnrateZoomer = 500;
+let zoomerDiffi = 2;
+
 function update(timestamp) {
     //obliczanie czasu od ostatniej klatki. Jeżeli gra będzie wolniej/szybciej updatować to "silnik" nie będzie działał szybciej/wolniej
     currFrame++;
@@ -160,24 +184,37 @@ function update(timestamp) {
             ship.mineDelay--;
         }
         DrawBase();
+        DrawPickups();
         DrawShip();
         DrawBullets();
-        DrawShooter();
         DrawMines();
+        DrawShooter();
+        DrawZoomer();
         DrawRocks();
         DrawCrosshair();
         DrawScore(0);
         DrawHearts();
 
 
+
+        ChangeDiff(gameState.globalDiff)
+        
         checkLives();
 
         if(!gameState.pause){
-            if(currFrame%spawnrateRocks == 0 && rocks.length < maxRocks){
+            gameState.unpausedCounter++;
+            if(gameState.unpausedCounter%2000 == 0){
+                gameState.globalDiff++;
+            }
+
+            if(gameState.unpausedCounter%spawnrateRocks == 0 && rocks.length < maxRocks){
                 SpawnWave(getRandomInt(rocksDiffi), "rock");
             }
-            if(currFrame%spawnrateShooter == 0 && shooters.length < maxShooter){
+            if(gameState.unpausedCounter%spawnrateShooter == 0 && shooters.length < maxShooter){
                 SpawnWave(getRandomInt(shooterDiffi), "shooter");
+            }
+            if(gameState.unpausedCounter%spawnrateZoomer == 0 && zoomers.length < maxZoomer){
+                SpawnWave(getRandomInt(zoomerDiffi), "zoomer");
             }
         }
 
@@ -201,8 +238,73 @@ function update(timestamp) {
 
 }
 
-let heartOffset = 120
+function ChangeDiff(difLevel){
+    if(difLevel == 0){
+        maxRocks = 0;
+        spawnrateRocks = 0;
+        rocksDiffi = 0;
+
+        maxShooter = 0;
+        spawnrateShooter = 0;
+        shooterDiffi = 0;
+
+        maxZoomer = 0;
+        spawnrateZoomer = 0;
+        ZoomerDiffi = 0;
+    }else if(difLevel == 1){
+        maxRocks = 12;
+        spawnrateRocks = 200;
+        rocksDiffi = 5;
+
+        maxShooter = 3;
+        spawnrateShooter = 400;
+        shooterDiffi = 2;
+
+        maxZoomer = 2;
+        spawnrateZoomer = 500;
+        ZoomerDiffi = 2;
+    }else if(difLevel == 2){
+        maxRocks = 14;
+        spawnrateRocks = 180;
+        rocksDiffi = 5;
+
+        maxShooter = 4;
+        spawnrateShooter = 400;
+        shooterDiffi = 2;
+
+        maxZoomer = 3;
+        spawnrateZoomer = 400;
+        ZoomerDiffi = 2;
+    }else if(difLevel == 3){
+        maxRocks = 16;
+        spawnrateRocks = 160;
+        rocksDiffi = 6;
+
+        maxShooter = 5;
+        spawnrateShooter = 400;
+        shooterDiffi = 2;
+
+        maxZoomer = 3;
+        spawnrateZoomer = 400;
+        ZoomerDiffi = 3;
+    }else if(difLevel == 9){
+        maxRocks = 20;
+        spawnrateRocks = 150;
+        rocksDiffi = 7;
+
+        maxShooter = 5;
+        spawnrateShooter = 300;
+        shooterDiffi = 3;
+
+        maxZoomer = 4;
+        spawnrateZoomer = 300;
+        ZoomerDiffi = 3;
+    }
+}
+
+
 function DrawHearts(){
+    let heartOffset = 120
     ctx.fillStyle = 'white';
     ctx.font = "80px Sans";
 
@@ -240,17 +342,25 @@ function RestartGame(){
     ship.y = can.height/2;
     ship.bullets = [];
     ship.mines = [];
-    rocks = [];
-    shooters = [];
-    base.hp = 200;
-    base.alive = true;
     ship.hp = 100;
     ship.lives = 3;
     ship.score = 0;
+    ship.hasShield = false;
+    
+    rocks = [];
+    shooters = [];
+
+    base.hp = 200;
+    base.alive = true;
+    base.hasShield = false;
+    base.pickups = [];
+    
+
     gameState.play = true;
     gameState.over = false;
     gameState.pause = false;
     gameState.hardmode = false;
+    gameState.globalDiff = 1;
 }
 
 
@@ -297,6 +407,10 @@ function DrawShip(){
     //deklaracja zdjęcia użytego do pokazywania statku
     const shipImage = new Image();
     shipImage.src = 'ship.png';
+
+    if(ship.hasShield == true){
+        shipImage.src = "shipShielded.png"
+    }
     
     //kontrola rotacjii statku
    
@@ -317,14 +431,17 @@ function DrawDebugInfo(){
     ctx.fillStyle = 'gray';
     ctx.font = "60px Arial";
     ctx.fillText("deltaTime: " + deltaTime.toFixed(4),10,50);
-    ctx.fillText("currFrame: " + currFrame,10,100);
+    ctx.fillText("currFrame: " + currFrame,10,700);
+    ctx.fillText("unpausedCurrFrame: " + gameState.unpausedCounter,10,750);
     ctx.fillText("setRefresh: " + fps.toFixed(4),10,150);
+    ctx.fillText("lastTime: " + lastTimestamp,10,200);
     ctx.fillText("shipRotation: " + ship.rotation.toFixed(4),10,250);
     ctx.fillText("sX: " + ship.x.toFixed(4),10,300);
     ctx.fillText("sY: " + ship.y.toFixed(4),10,350);
     ctx.fillText("sHP: " + ship.hp, 10, 400)
     ctx.fillText("sLiv: " + ship.lives, 10, 450)
     ctx.fillText("bHp: " + base.hp, 10, 500)
+    ctx.fillText("sFS: " + ship.bulletFireSpeed, 10, 550)
     ctx.fillText("mX: " + mouse.x,800,50);
     ctx.fillText("mY: " + mouse.y,800,100);
     ctx.fillText("lClick: " + mouse.leftClick,1200,50);
@@ -332,6 +449,7 @@ function DrawDebugInfo(){
     ctx.fillText("bCount: " + ship.bullets.length, 800, 200)
     ctx.fillText("mCount: " + ship.mines.length, 800, 250)
     ctx.fillText("rCount: " + rocks.length, 800, 300)
+    ctx.fillText("gDiff: " + gameState.globalDiff, 800, 350)
     ctx.fillText("play: " + gameState.play, 1600, 50)
     ctx.fillText("over: " + gameState.over, 1600, 100)
     ctx.fillText("pause: " + gameState.pause, 1600, 150)
@@ -359,10 +477,12 @@ function MoveShip(){
             ship.yAcc += ship.speed * deltaTime;
         }
 
+
+
         if(mouse.leftClick){
             FireBullet("ship");
         }
-        if(mouse.rightClick){
+        if(mouse.rightClick || keys[" "]){ // spacja to jest dosłownie spacja a nie "Space" z jakiegoś powodu
             FireMine();
         }
     }
@@ -374,6 +494,9 @@ function MoveShip(){
     }
     if(debugMode && keys["f"] && currFrame%10 == 0){
         SpawnEnemy(500, 500, "shooter")
+    }
+    if(debugMode && keys["b"] && currFrame%10 == 0){
+        SpawnEnemy(500, 500, "zoomer")
     }
     if(debugMode && keys["z"] && currFrame%10 == 0){
         base.hp -= 10;
@@ -501,39 +624,22 @@ const tR = {x:can.width, y:0};
 const bL = {x: 0, y: can.height};
 const bR = {x:can.width, y:can.height};
 function SpawnWave(numEnemy, type){    
-    if(type == "rock"){
-        for(let i = 0; i < numEnemy; ++i){ //losuje się z jakiego miejsca mają się pojawić rzeczy
-            let random = getRandomInt(4)
-        
-            if(random == 0){
-                SpawnEnemy(tL.x, tL.y, type)
-            }else if(random == 1){
-                SpawnEnemy(tR.x, tR.y, type)
-            }else if(random == 2){
-                SpawnEnemy(bL.x, bL.y, type)
-            }else if(random == 3){
-                SpawnEnemy(bR.x, bR.y, type)
-            }
-        }
-    }
-
-    if(type == "shooter"){
-        for(let i = 0; i < numEnemy; ++i){
-            let random = getRandomInt(4)
-        
-            if(random == 0){
-                SpawnEnemy(tL.x, tL.y, type)
-            }else if(random == 1){
-                SpawnEnemy(tR.x, tR.y, type)
-            }else if(random == 2){
-                SpawnEnemy(bL.x, bL.y, type)
-            }else if(random == 3){
-                SpawnEnemy(bR.x, bR.y, type)
-            }
+    for(let i = 0; i < numEnemy; ++i){ //losuje się z jakiego miejsca mają się pojawić rzeczy
+        let random = getRandomInt(4)
+    
+        if(random == 0){
+            SpawnEnemy(tL.x, tL.y, type)
+        }else if(random == 1){
+            SpawnEnemy(tR.x, tR.y, type)
+        }else if(random == 2){
+            SpawnEnemy(bL.x, bL.y, type)
+        }else if(random == 3){
+            SpawnEnemy(bR.x, bR.y, type)
         }
     }
 }
 
+let zoomers = [];
 let rocks = [];
 let shooters = [];
 function SpawnEnemy(xPos, yPos, type, xVel, yVel){
@@ -582,6 +688,25 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             bulletSprite: 0, //czego użyć do pokazania pocisku
         }
         shooters.push(shooter)
+    }else if(type == "zoomer"){
+        const zoomer = {
+            x: xPos,
+            y: yPos,
+            speed: 2,
+            width: 60,
+            height: 60,
+            sprite: 0,
+            maxHp: 50, //stała ilości zdrowia
+            hp: 50, //zmienna ilości zdrowia
+            firstFrame: true,
+            alive: true,
+            dx: 0, //różnica dystansu od bazy w osi x
+            dy: 0, //różnica dystansu od bazy w osi y
+            distance: 0, //dystans od bazy w pierwszej klatce życia asteoridy
+            speedX: 0, 
+            speedY: 0,
+        }
+        zoomers.push(zoomer)
     }
 }
 
@@ -621,9 +746,13 @@ function DrawShooter(){
             
             shooter.bullets.forEach((bullet, bulletIndex) => {
                 if (Collision(bullet, ship)) {
-                    ship.hp -= bullet.dmg;
+                    if(ship.hasShield){
+                        ship.hasShield = false;
+                    }else{
+                        ship.hp -= bullet.dmg;
+                        ship.recentlyHit = true;
+                    }
                     shooter.bullets.splice(bulletIndex, 1); //usuń kulę, która trafiła
-                    ship.recentlyHit = true;
                 }
             })
         
@@ -642,10 +771,14 @@ function DrawShooter(){
             })
             
             if (Collision(ship, shooter)) {
+                if(ship.hasShield){
+                    ship.hasShield = false;
+                }else{
+                    ship.hp -= 35;
+                    DrawScore(-10);
+                    ship.recentlyHit = true;
+                }
                 shooter.hp = 0;
-                ship.hp -= 35;
-                DrawScore(-10);
-                ship.recentlyHit = true;
             }
             
 
@@ -675,6 +808,11 @@ function DrawBase(){
     const baseImageHit = new Image();
     baseImage.src = 'school.png';
     baseImageHit.src = "schoolHit.png";
+
+    if(base.hasShield == true){
+        baseImage.src = "schoolShielded.png"
+    }
+    
     if(base.alive){
         DrawHp(base);
         ctx.drawImage(baseImage, base.x, base.y, base.width, base.height);
@@ -698,12 +836,185 @@ function DrawBase(){
             }
         }
 
+        if(gameState.unpausedCounter%3000 == 0){
+            SpawnPickup(getRandomInt(4));
+        }
+
     }else{
-        gameState.hardmode = true;
-        
+        gameState.globalDiff = 9;
+        gameState.hardmode = true;   
     }
+}
 
+function SpawnPickup(idPickup){
+    if(idPickup == 0){
+        const hpUp = {
+            x: base.x + base.width/2,
+            y: base.y + base.height/2,
+            speed: 1,
+            width: 40,
+            height: 40,
+            sprite: 0,
+            firstFrame: true,
+            picked: false,
+            dx: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            dy: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            distance: 0, 
+            speedX: 0, 
+            speedY: 0,
+            tag: "hpUp",
+            duration: 0,
+            maxDuration: 200,
+            endFrame: 0,
+            kill: false
+        }    
+        base.pickups.push(hpUp)
+    }else if(idPickup == 1){
+        const fireUp = {
+            x: base.x + base.width/2,
+            y: base.y + base.height/2,
+            speed: 1,
+            width: 40,
+            height: 40,
+            sprite: 0,
+            firstFrame: true,
+            firstPickup: true,
+            picked: false,
+            dx: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            dy: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            distance: 0, 
+            speedX: 0, 
+            speedY: 0,
+            tag: "fireUp",
+            duration: 0,
+            maxDuration: 1000,
+            endFrame: 0,
+            kill: false
+        }    
+        base.pickups.push(fireUp)
+    }else if(idPickup == 2){
+        const fireUp = {
+            x: base.x + base.width/2,
+            y: base.y + base.height/2,
+            speed: 1,
+            width: 40,
+            height: 40,
+            sprite: 0,
+            firstFrame: true,
+            firstPickup: true,
+            picked: false,
+            dx: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            dy: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            distance: 0, 
+            speedX: 0, 
+            speedY: 0,
+            tag: "baseShield",
+            duration: 0,
+            maxDuration: 200,
+            endFrame: 0,
+            kill: false
+        }    
+        base.pickups.push(fireUp)
+    }else if(idPickup == 3){
+        const fireUp = {
+            x: base.x + base.width/2,
+            y: base.y + base.height/2,
+            speed: 1,
+            width: 40,
+            height: 40,
+            sprite: 0,
+            firstFrame: true,
+            firstPickup: true,
+            picked: false,
+            dx: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            dy: getRandomInt(2) == 1 ? -getRandomInt(2) : getRandomInt(2), 
+            distance: 0, 
+            speedX: 0, 
+            speedY: 0,
+            tag: "shipShield",
+            duration: 0,
+            maxDuration: 200,
+            endFrame: 0,
+            kill: false
+        }    
+        base.pickups.push(fireUp)
+    }
+}
 
+function DrawPickups(){
+    base.pickups.forEach(pick => {
+        if(!pick.picked){
+            if(pick.firstFrame){
+                
+                pick.distance = Math.sqrt(pick.dx * pick.dx + pick.dy * pick.dy);
+                pick.speedX = (pick.dx / pick.distance) * pick.speed * getRandomArbitrary(-1.2, 1.2);
+                pick.speedY = (pick.dy / pick.distance) * pick.speed * getRandomArbitrary(-1.2, 1.2);
+
+                pick.firstFrame = false;
+            }
+            
+            if(!gameState.pause){
+                pick.speedX *= 0.995;
+                pick.speedY *= 0.995;
+                pick.x += pick.speedX *deltaTime;
+                pick.y += pick.speedY *deltaTime;
+            }
+            
+            if (Collision(ship, pick)) {
+                pick.picked = true;
+            }
+            
+            const pickImg = new Image();
+            if(pick.tag == "hpUp"){
+                pickImg.src = 'hpUp.png';
+            }else if(pick.tag == "fireUp"){
+                pickImg.src = 'fireUp.png';
+            }else if(pick.tag == "baseShield"){
+                pickImg.src = 'baseShield.png';
+            }else if(pick.tag == "shipShield"){
+                pickImg.src = 'shipShield.png';
+            }
+
+            ctx.drawImage(pickImg, pick.x - pick.width/2, pick.y - pick.height/2, pick.width, pick.height);
+        }else{
+            if(pick.tag == "hpUp"){
+                
+                ship.hp = ship.maxHp;
+
+                pick.kill = true;
+            }else if(pick.tag =="fireUp"){
+                
+                
+                if(pick.firstPickup){
+                    pick.endFrame = gameState.unpausedCounter + pick.maxDuration;
+
+                    if(ship.bulletFireSpeed > 0){
+                        ship.bulletFireSpeed -= 5;
+                    }
+                    
+
+                    pick.firstPickup = false;
+                }
+
+                if(gameState.unpausedCounter == pick.endFrame){
+
+                    ship.bulletFireSpeed += 5;
+
+                    pick.kill = true;
+                }
+            }else if(pick.tag == "baseShield"){
+                base.hasShield = true;
+                pick.kill = true;
+            }else if(pick.tag == "shipShield"){
+                ship.hasShield = true;
+                pick.kill = true;
+            }
+
+            if(pick.kill){
+                base.pickups.splice(base.pickups.indexOf(pick), 1);
+            }
+        }
+    });
 }
 
 function DrawHp(obj){
@@ -766,19 +1077,27 @@ function DrawRocks(){
             })
             
             if (Collision(ship, rock)) {
+                if(ship.hasShield){
+                    ship.hasShield = false;
+                }else{
+                    ship.hp -= 20;
+                    DrawScore(-10);
+                    ship.recentlyHit = true;
+                }
                 rock.hp = 0;
-                ship.hp -= 20;
-                DrawScore(-10);
-                ship.recentlyHit = true;
             }
 
             if (Collision(base, rock) && !(gameState.hardmode)) {
+                if(base.hasShield){
+                    base.hasShield = false;
+                }else{
+                    base.hp -= 20;
+                    DrawScore(-20);
+                    base.recentlyHit = true;
+                    aElectroError = new Audio('aElectroError.wav');
+                    aElectroError.play();
+                }
                 rock.hp = 0;
-                base.hp -= 20;
-                DrawScore(-20);
-                base.recentlyHit = true;
-                aElectroError = new Audio('aElectroError.wav');
-                aElectroError.play();
             }
 
             //teleportuj na drugą stronę jak wyjdziesz poza granice jak w mario
@@ -810,6 +1129,110 @@ function DrawRocks(){
         }else{
             DrawScore(10);
             rocks.splice(rocks.indexOf(rock), 1);
+        }
+    })
+}
+
+function DrawZoomer(){
+    zoomers.forEach(zoomer => {
+        if(zoomer.alive){
+            if(zoomer.firstFrame){
+                
+                zoomer.dx = can.width/2 - zoomer.x;
+                zoomer.dy = can.height/2 - zoomer.y;
+                if(zoomer.dx > 0){
+                    zoomer.dx *= getRandomArbitrary(0.9, 1.5)
+                }else{
+                    zoomer.dx *= getRandomArbitrary(-0.9, -1.5)
+                }
+
+                if(zoomer.dy > 0){
+                    zoomer.dy *= getRandomArbitrary(0.9, 1.5)
+                }else{
+                    zoomer.dy *= getRandomArbitrary(-0.9, -1.5)
+                }
+
+                zoomer.distance = Math.sqrt(zoomer.dx * zoomer.dx + zoomer.dy * zoomer.dy);
+                zoomer.speedX = (zoomer.dx / zoomer.distance) * zoomer.speed * getRandomArbitrary(-2.5, 2.5);
+                zoomer.speedY = (zoomer.dy / zoomer.distance) * zoomer.speed * getRandomArbitrary(-2.5, 2.5);
+                zoomer.firstFrame = false;
+
+                //w pierwszej klatce, pojaw się i miej losowy offset kierunku żeby nie lecieć w pierwszej linii.
+                //miej także losową prędkość
+            }
+
+            if(!gameState.pause){
+                zoomer.x += zoomer.speedX *deltaTime;
+                zoomer.y += zoomer.speedY *deltaTime;
+            }
+
+
+            ship.bullets.forEach((bullet, bulletIndex) => {
+                if (Collision(bullet, zoomer)) {
+                    zoomer.hp -= bullet.dmg;
+                    ship.bullets.splice(bulletIndex, 1);
+                }
+            })
+            ship.mines.forEach((mine) => {
+                if (Collision(mine, zoomer)) {
+                    zoomer.hp -= mine.dmg;
+                    mine.alive = false;
+                }
+            })
+            
+            if (Collision(ship, zoomer)) {
+                if(ship.hasShield){
+                    ship.hasShield = false;
+                }else{
+                    ship.hp -= 10;
+                    DrawScore(-10);
+                    ship.recentlyHit = true;
+                }
+                zoomer.hp = 0;
+            }
+
+            if (Collision(base, zoomer) && !(gameState.hardmode)) {
+                if(base.hasShield){
+                    base.hasShield = false;
+                }else{
+                    base.hp -= 10;
+                    DrawScore(-20);
+                    base.recentlyHit = true;
+                    aElectroError = new Audio('aElectroError.wav');
+                    aElectroError.play();
+                }
+                zoomer.hp = 0;
+            }
+
+            //teleportuj na drugą stronę jak wyjdziesz poza granice jak w mario
+            if(zoomer.x > can.width){
+                zoomer.x = 0
+            }
+            if(zoomer.y > can.height){
+                zoomer.y = 0
+            }
+            if(zoomer.x < 0){
+                zoomer.x = can.width;
+            }
+            if(zoomer.y < 0){
+                zoomer.y = can.height;
+            }
+
+
+            ctx.fillStyle = "rgb(10, 121, 121)";
+            ctx.fillRect(zoomer.x-2, zoomer.y-2, zoomer.width+4, zoomer.height+4);
+
+            ctx.fillStyle = "rgb(0, 0, 0)";
+            ctx.fillRect(zoomer.x, zoomer.y, zoomer.width, zoomer.height);
+
+            ctx.fillStyle = "rgb(10, 121, 121, "+zoomer.hp/zoomer.maxHp+")";
+            ctx.fillRect(zoomer.x, zoomer.y, zoomer.width, zoomer.height);
+            if(zoomer.hp <= 0){
+                zoomer.alive = false;
+            }
+        }else{
+            DrawScore(25);
+            zoomers.splice(zoomers.indexOf(zoomer), 1);
         }
     })
 }
@@ -854,7 +1277,7 @@ function DrawEnemyBullets(obj){
 
 
 
-            if(currFrame%40 == 0){
+            if(gameState.unpausedCounter%40 == 0){
                 obj.bulletSprite = obj.bulletSprite == 1 ? 0 : 1;
                 //jeżeli sprite pocisku jest równy 1: ustaw na 0 i jeżeli 0: ustaw na 1
             }
@@ -968,9 +1391,6 @@ function DrawMines(){
             aBoom = new Audio('aBoom.wav');
             aBoom.play();
             
-            if(mine.decayTime < 0){
-                ship.mines.shift(); 
-            }
 
             ship.mines.splice(ship.mines.indexOf(mine), 1)
         }   
