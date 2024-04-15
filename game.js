@@ -1,4 +1,4 @@
-//w sali 3 hp
+//w sali 4 effekt glow
 let debugMode = true;
 
 let scoreModifier = 1;
@@ -78,7 +78,8 @@ const base = {
     alive: true,
     recentlyHit: false,
     pickups: [],
-    hasShield: false
+    hasShield: false,
+    alarmCounter: 0
 }
 
 
@@ -95,7 +96,6 @@ const keys = [];
 window.addEventListener('keydown', e => {
     keys[e.key] = true;
 
-    console.log(e.key)
     if(e.key == "Escape"){
         gameState.pause = !gameState.pause;
     }
@@ -349,6 +349,7 @@ function RestartGame(){
     
     rocks = [];
     shooters = [];
+    zoomers = [];
 
     base.hp = 200;
     base.alive = true;
@@ -361,6 +362,7 @@ function RestartGame(){
     gameState.pause = false;
     gameState.hardmode = false;
     gameState.globalDiff = 1;
+    gameState.unpausedCounter = 0;
 }
 
 
@@ -626,15 +628,33 @@ const bR = {x:can.width, y:can.height};
 function SpawnWave(numEnemy, type){    
     for(let i = 0; i < numEnemy; ++i){ //losuje się z jakiego miejsca mają się pojawić rzeczy
         let random = getRandomInt(4)
-    
-        if(random == 0){
-            SpawnEnemy(tL.x, tL.y, type)
-        }else if(random == 1){
-            SpawnEnemy(tR.x, tR.y, type)
-        }else if(random == 2){
-            SpawnEnemy(bL.x, bL.y, type)
-        }else if(random == 3){
-            SpawnEnemy(bR.x, bR.y, type)
+        let randomForShooter = getRandomInt(6)
+        
+
+        if(type != "shooter"){
+            if(random == 0){
+                SpawnEnemy(tL.x, tL.y, type)
+            }else if(random == 1){
+                SpawnEnemy(tR.x, tR.y, type)
+            }else if(random == 2){
+                SpawnEnemy(bL.x, bL.y, type)
+            }else if(random == 3){
+                SpawnEnemy(bR.x, bR.y, type)
+            }
+        }else{
+            if(randomForShooter == 0){
+                SpawnEnemy(tL.x, tL.y, type)
+            }else if(randomForShooter == 1){
+                SpawnEnemy(tR.x, tR.y, type)
+            }else if(randomForShooter == 2){
+                SpawnEnemy(bL.x, bL.y, type)
+            }else if(randomForShooter == 3){
+                SpawnEnemy(bR.x, bR.y, type)
+            }else if (randomForShooter == 4){
+                SpawnEnemy(bL.x, bL.y/2, type)
+            }else if (randomForShooter == 4){
+                SpawnEnemy(bR.x, bR.y/2, type)
+            }
         }
     }
 }
@@ -802,8 +822,37 @@ function DrawShooter(){
     })
 }
 
-let baseStatusDamageStart = 0;
+
+
+function AddShadow(x, y, w, h, color, blur, offset, intensity){
+
+    for(let i = 0; i<intensity; i++){
+        ctx.shadowColor = color;
+        ctx.shadowBlur = blur;
+    
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(x-offset/2, y-offset/2, w+offset, h+offset);
+    
+        ctx.shadowColor = "rgb(0, 0, 0, 0)";
+        ctx.shadowBlur = 0;
+    }
+
+}
+
+explosions = [];
+function SpawnExplosion(obj, clr, dur){
+    const explosion = {
+        x: obj.x,
+        y: obj.y,
+        width: obj.width,
+        height: obj.height,
+        color: clr,
+        duration: dur
+    }
+}
+
 function DrawBase(){
+
     const baseImage = new Image();
     const baseImageHit = new Image();
     baseImage.src = 'school.png';
@@ -814,8 +863,12 @@ function DrawBase(){
     }
     
     if(base.alive){
+        
         DrawHp(base);
+        
         ctx.drawImage(baseImage, base.x, base.y, base.width, base.height);
+
+
         if(base.hp <= 0){
             base.alive = false;
             aElectroErrorHeavy = new Audio('aElectroErrorHeavy.wav');
@@ -823,18 +876,24 @@ function DrawBase(){
         }
 
         if(base.recentlyHit){
-            baseStatusDamageStart = 10;
+            base.alarmCounter = 20;
             
             base.recentlyHit = false;
         }
-    
-        if(baseStatusDamageStart != 0){
-            if(currFrame%20 == 0){
-                ctx.drawImage(baseImageHit, base.x, base.y, base.width, base.height);
-                ctx.fillText("⚡‼",base.x,base.y);
-                baseStatusDamageStart--;
-            }
+
+        if(base.alarmCounter > 0){
+            AddShadow(base.x, base.y, base.width, base.height, "red", 100, 0);
+            ctx.drawImage(baseImageHit, base.x, base.y, base.width, base.height);
+            base.alarmCounter--;
         }
+
+        /*
+        AddShadow(base.x, base.y, base.width, base.height, "red", 100, 0)
+        ctx.drawImage(baseImageHit, base.x, base.y, base.width, base.height);
+        ctx.fillText("⚡‼",base.x,base.y);
+        */
+
+        
 
         if(gameState.unpausedCounter%3000 == 0){
             SpawnPickup(getRandomInt(4));
@@ -1272,8 +1331,6 @@ function DrawEnemyBullets(obj){
 
 
             
-            ctx.fillStyle = "rgb(134, 121, 121)";
-            ctx.fillRect(bullet.x-2, bullet.y-2, bullet.width+4, bullet.height+4);
 
 
 
@@ -1283,11 +1340,16 @@ function DrawEnemyBullets(obj){
             }
             
             if(obj.bulletSprite == 0){
+                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")", 50, 10, 2);
+                
+
                 ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
                 
             }else{
-                ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
+                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")", 50, 10, 2);
+
                 
+                ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")"; 
             }
             ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             if(bullet.decayTime < 0){
