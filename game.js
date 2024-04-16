@@ -1,4 +1,4 @@
-//w sali 4 effekt glow
+//w sali explosion basic dziala
 let debugMode = true;
 
 let scoreModifier = 1;
@@ -112,6 +112,10 @@ window.addEventListener('keydown', e => {
         gameState.globalDiff = 0
     }
 
+    if(e.key == "t" && debugMode){
+        SpawnExplosion(500, 500, 20, 20, "rgb(255, 10, 10)", 400, 5)
+    }
+
     if(e.key == "1" && debugMode){
         gameState.globalDiff = 1
     }
@@ -191,6 +195,7 @@ function update(timestamp) {
         DrawShooter();
         DrawZoomer();
         DrawRocks();
+        DrawExplosions();
         DrawCrosshair();
         DrawScore(0);
         DrawHearts();
@@ -840,15 +845,45 @@ function AddShadow(x, y, w, h, color, blur, offset, intensity){
 }
 
 explosions = [];
-function SpawnExplosion(obj, clr, dur){
+function SpawnExplosion(x, y, w, h, clr, dur, intens){
     const explosion = {
-        x: obj.x,
-        y: obj.y,
-        width: obj.width,
-        height: obj.height,
+        x: x,
+        y: y,
+        width: w,
+        height: h,
         color: clr,
-        duration: dur
+        maxDuration: dur,
+        durationScaling: 0,
+        animationTimer: 0,
+        intensity: intens
     }
+    explosions.push(explosion);
+}
+
+function DrawExplosions(){
+    explosions.forEach(exp => {
+        for(let i = 0; i < exp.intensity; ++i){
+
+            if(!gameState.pause){
+                exp.animationTimer++;
+            }
+            
+            ctx.shadowColor = exp.color;
+            ctx.shadowBlur = exp.animationTimer;
+            console.log(exp.animationTimer)
+    
+            ctx.fillStyle = "rgb(10, 10, 10, "+(exp.maxDuration-exp.animationTimer/(exp.maxDuration/2))+")";
+            //trzeba to poprawić
+            ctx.fillRect(exp.x,exp.y,exp.width,exp.height);
+    
+            ctx.shadowColor = "rgb(0, 0, 0, 0)";
+            ctx.shadowBlur = 0;
+            
+            if(exp.animationTimer == exp.maxDuration || exp.animationTimer > 300){
+                explosions.splice(explosions.indexOf(exp), 1);
+            }
+        }
+    })
 }
 
 function DrawBase(){
