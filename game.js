@@ -16,10 +16,10 @@ const can = document.getElementById("canvas");
 const ctx = can.getContext("2d");
 
 //Iniclalizacja stylów dla canvasu
-let cWidth = 1200;
-let cHeight = 800;
+let cWidth = 1920;
+let cHeight = 1080;
 
-let scale = 2;
+let scale = 1.3;
 can.style.width = cWidth + 'px';
 can.style.height = cHeight + 'px';
 can.style.cursor = "none";
@@ -300,18 +300,54 @@ function ChangeDiff(difLevel){
         maxZoomer = 3;
         spawnrateZoomer = 400;
         ZoomerDiffi = 3;
-    }else if(difLevel == 9){
-        maxRocks = 20;
-        spawnrateRocks = 150;
+    }else if(difLevel == 3){
+        maxRocks = 17;
+        spawnrateRocks = 140;
         rocksDiffi = 7;
 
         maxShooter = 5;
-        spawnrateShooter = 300;
+        spawnrateShooter = 350;
         shooterDiffi = 3;
 
         maxZoomer = 4;
-        spawnrateZoomer = 300;
-        ZoomerDiffi = 3;
+        spawnrateZoomer = 350;
+        ZoomerDiffi = 4;
+    }else if(difLevel == 4){
+        maxRocks = 20;
+        spawnrateRocks = 140;
+        rocksDiffi = 7;
+
+        maxShooter = 6;
+        spawnrateShooter = 350;
+        shooterDiffi = 3;
+
+        maxZoomer = 5;
+        spawnrateZoomer = 350;
+        ZoomerDiffi = 4;
+    }else if(difLevel == 5){
+        maxRocks = 24;
+        spawnrateRocks = 140;
+        rocksDiffi = 7;
+
+        maxShooter = 8;
+        spawnrateShooter = 340;
+        shooterDiffi = 3;
+
+        maxZoomer = 6;
+        spawnrateZoomer = 750;
+        ZoomerDiffi = 4;
+    }else if(difLevel == 9){
+        maxRocks = 25;
+        spawnrateRocks = 140;
+        rocksDiffi = 7;
+
+        maxShooter = 12;
+        spawnrateShooter = 320;
+        shooterDiffi = 5;
+
+        maxZoomer = 6;
+        spawnrateZoomer = 750;
+        ZoomerDiffi = 6;
     }
 }
 
@@ -336,7 +372,7 @@ function DrawScore(delta){
     if(delta > 0){
         ship.score += (delta * scoreModifier);
     }else{
-        ship.score += delta;
+        //ship.score += delta;
     }
 
     if(ship.score < 0){
@@ -843,13 +879,13 @@ function DrawShooter(){
 
 
 
-function AddShadow(x, y, w, h, color, blur, offset, intensity){
+function AddShadow(x, y, w, h, color, blur, offset, intensity, opacity){
 
     for(let i = 0; i<intensity; i++){
         ctx.shadowColor = color;
         ctx.shadowBlur = blur;
     
-        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillStyle = "rgb(0, 0, 0, "+opacity+")";
         ctx.fillRect(x-offset/2, y-offset/2, w+offset, h+offset);
     
         ctx.shadowColor = "rgb(0, 0, 0, 0)";
@@ -993,7 +1029,8 @@ function DrawBase(){
 
     }else{
         gameState.globalDiff = 9;
-        gameState.hardmode = true;   
+        gameState.hardmode = true;
+        ship.lives = 1;   
     }
 }
 
@@ -1094,7 +1131,7 @@ function SpawnPickup(idPickup){
 
 function DrawPickups(){
     base.pickups.forEach(pick => {
-        if(!pick.picked){
+        if(!pick.picked && !gameState.hardmode){
             if(pick.firstFrame){
                 
                 pick.distance = Math.sqrt(pick.dx * pick.dx + pick.dy * pick.dy);
@@ -1200,6 +1237,7 @@ function DrawRocks(){
                 rock.dx = can.width/2 - rock.x + getRandomArbitrary(-400, 400);
                 rock.dy = can.height/2 - rock.y + getRandomArbitrary(-400, 400);
                 rock.distance = Math.sqrt(rock.dx * rock.dx + rock.dy * rock.dy);
+                
                 rock.speedX = (rock.dx / rock.distance) * rock.speed * getRandomArbitrary(-2.5, 2.5);
                 rock.speedY = (rock.dy / rock.distance) * rock.speed * getRandomArbitrary(-2.5, 2.5);
                 rock.firstFrame = false;
@@ -1213,6 +1251,7 @@ function DrawRocks(){
                 rock.y += rock.speedY *deltaTime;
             }
 
+        
 
             ship.bullets.forEach((bullet, bulletIndex) => {
                 if (Collision(bullet, rock)) {
@@ -1245,8 +1284,8 @@ function DrawRocks(){
                     base.hp -= 20;
                     DrawScore(-20);
                     base.recentlyHit = true;
-                    aElectroError = new Audio('aElectroError.wav');
-                    aElectroError.play();
+                    //aElectroError = new Audio('aElectroError.wav');
+                    //aElectroError.play();
                 }
                 rock.hp = 0;
             }
@@ -1425,20 +1464,20 @@ function DrawEnemyBullets(obj){
             
 
 
-
+            ctx.fillStyle = "red";
             if(gameState.unpausedCounter%40 == 0){
                 obj.bulletSprite = obj.bulletSprite == 1 ? 0 : 1;
                 //jeżeli sprite pocisku jest równy 1: ustaw na 0 i jeżeli 0: ustaw na 1
             }
             
             if(obj.bulletSprite == 0){
-                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")", 50, 10, 2);
+                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "rgb(255, 10, 10)", 50, 10, 2);
                 
 
                 ctx.fillStyle = "rgb(255, 10, 10, "+bullet.decayTime/bullet.maxDecay+")";
                 
             }else{
-                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")", 50, 10, 2);
+                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "rgb(255, 255, 10)", 50, 10, 2);
 
                 
                 ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")"; 
@@ -1495,7 +1534,9 @@ function DrawBullets(){
                 bullet.y = can.height;
             }
 
-            
+            if(!bullet.spawnedFromMine){
+                AddShadow(bullet.x, bullet.y, bullet.width, bullet.height, "yellow", 10, 1, 2, bullet.decayTime/bullet.maxDecay)
+            }
             ctx.fillStyle = "rgb(255, 255, 10, "+bullet.decayTime/bullet.maxDecay+")";
             if(bullet.spawnedFromMine){
                 ctx.fillStyle = "rgb(255, 150, 0, "+bullet.decayTime/bullet.maxDecay+")";
