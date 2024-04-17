@@ -1,4 +1,4 @@
-//w sali explosion basic dziala
+//explosion shield
 let debugMode = true;
 
 let scoreModifier = 1;
@@ -113,7 +113,7 @@ window.addEventListener('keydown', e => {
     }
 
     if(e.key == "t" && debugMode){
-        SpawnExplosion(500, 500, 20, 20, "rgb(255, 10, 10)", 400, 5)
+        DrawShield(100, 200, 20);
     }
 
     if(e.key == "1" && debugMode){
@@ -187,6 +187,15 @@ function update(timestamp) {
         if(ship.mineDelay != 0){
             ship.mineDelay--;
         }
+
+        if(base.hasShield){
+            DrawShield(can.width/2+(70+Math.sin(gameState.unpausedCounter*0.05)), can.height/2, (35+Math.sin(gameState.unpausedCounter*0.05)));//ship
+        }
+
+        if(ship.hasShield){
+            DrawShield(ship.x+(40+Math.sin(gameState.unpausedCounter*0.05)), ship.y, (20+Math.sin(gameState.unpausedCounter*0.05)));//base
+        }
+
         DrawBase();
         DrawPickups();
         DrawShip();
@@ -199,7 +208,6 @@ function update(timestamp) {
         DrawCrosshair();
         DrawScore(0);
         DrawHearts();
-
 
 
         ChangeDiff(gameState.globalDiff)
@@ -821,6 +829,12 @@ function DrawShooter(){
             } 
         }
         else{
+
+            if(getRandomInt(100) < 5){
+                SpawnPickup(getRandomInt(3))
+            } //5% na pojawienie pickupu
+
+            SpawnExplosion(shooter.x+shooter.width/2, shooter.y+shooter.height/2, 20, 20, "red", 300, 15)
             DrawScore(50);
             shooters.splice(shooters.indexOf(shooter), 1);
         }
@@ -872,18 +886,61 @@ function DrawExplosions(){
             ctx.shadowBlur = exp.animationTimer;
             console.log(exp.animationTimer)
     
-            ctx.fillStyle = "rgb(10, 10, 10, "+(exp.maxDuration-exp.animationTimer/(exp.maxDuration/2))+")";
+            ctx.fillStyle = exp.color;
             //trzeba to poprawić
             ctx.fillRect(exp.x,exp.y,exp.width,exp.height);
     
             ctx.shadowColor = "rgb(0, 0, 0, 0)";
             ctx.shadowBlur = 0;
             
-            if(exp.animationTimer == exp.maxDuration || exp.animationTimer > 300){
+            if(exp.animationTimer == exp.maxDuration || exp.animationTimer == 210){
                 explosions.splice(explosions.indexOf(exp), 1);
             }
         }
     })
+}
+
+function DrawShield(x, y, d){
+    currX = x-5*d;
+    currY = y+1*d;
+
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.strokeStyle = "rgb(10, 10, 255)";
+    ctx.moveTo(currX, currY);
+    currX += 0;
+    currY += -2*d;
+    ctx.lineTo(currX,currY);
+    currX += 2*d;
+    currY += -2*d;
+    ctx.lineTo(currX,currY);
+    currX += 2*d;
+    currY += 0;
+    ctx.lineTo(currX,currY);
+    currX += 2*d;
+    currY += 2*d;
+    ctx.lineTo(currX,currY);
+    currX += 0;
+    currY += 2*d;
+    ctx.lineTo(currX,currY);
+    currX += -2*d;
+    currY += 2*d;
+    ctx.lineTo(currX,currY);
+    currX += -2*d;
+    currY += 0;
+    ctx.lineTo(currX,currY);
+    currX += -2*d;
+    currY += -2*d;
+    ctx.lineTo(currX,currY);
+    currX += 0;
+    currY += -2*d;
+    ctx.lineTo(currX,currY);
+
+
+    
+    
+    ctx.moveTo(x, y);
+    ctx.stroke();
 }
 
 function DrawBase(){
@@ -930,7 +987,7 @@ function DrawBase(){
 
         
 
-        if(gameState.unpausedCounter%3000 == 0){
+        if(gameState.unpausedCounter%3000 == 0 || keys["h"] && currFrame%10 == 0){
             SpawnPickup(getRandomInt(4));
         }
 
@@ -1472,6 +1529,9 @@ function DrawMines(){
             
         }else{
 
+
+            SpawnExplosion(mine.x+mine.width/2, mine.y+mine.height/2, 20, 20, "green", 300, 5)
+            SpawnExplosion(mine.x+mine.width/2, mine.y+mine.height/2, 20, 20, "orange", 300, 5)
             //to jest absolutne spaghetti, ale działa
             //pojaw pociski od "wybuchu" lewo, prawo, góra, dół
             FireBullet("mine", mine, 0, 1);
