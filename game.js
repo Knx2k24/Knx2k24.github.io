@@ -8,8 +8,9 @@ const gameState = {
     hardmode: false,
     over: false,
     pause: false,
+    menu: false,
     globalDiff: 1,
-    unpausedCounter: 0
+    unpausedCounter: 0,
 }
 //Iniclaizacjia elementów
 const can = document.getElementById("canvas");
@@ -37,10 +38,89 @@ if(can){
 //Funkcja, która się wykona po wczytaniu JSa
 function OnLoad(){
     requestAnimationFrame(update);
-    gameState.play = true;
-
+    gameState.play = false;
+    gameState.menu = true;
+    debugMode = false;
     atestAudio = new Audio('testAudio.mp3');
 }
+
+var topFont = new FontFace('topFont', 'url(fonts/MinecraftTen-VGORe.ttf)');
+document.fonts.add(topFont);
+function DrawMenu(){
+    ctx.textAlign = "center";
+    
+    let textTop = {t: "TZN", d: "DEFENDERS"};
+    let textTopObj = {t: ctx.measureText(textTop.t), d: ctx.measureText(textTop.d)};
+    let textTopHeight = 200 + 4*Math.sin(currFrame*0.05); 
+    
+    let textTopColor = Math.abs(Math.tan(currFrame*0.005)*50);
+    
+    ctx.fillStyle = "rgba("+textTopColor+", "+textTopColor+", 80, 1)";
+    ctx.font = "240px topFont";
+    ctx.fillText(textTop.t, can.width/2, textTopHeight);
+    ctx.fillStyle = "rgba(0, 0, 120, 1)";
+    ctx.font = "180px topFont";
+    ctx.fillText(textTop.d, can.width/2, textTopHeight + 200);
+    
+    
+    let textMid = "Graj";
+    let textMidHeight = can.height/2;
+    
+    ctx.fillStyle = 'white';
+    ctx.font = "80px topFont";
+    ctx.fillText(textMid, can.width/2, textMidHeight);
+    
+    
+    
+    
+    //▶▷
+    let textPointer = {f:"▶", e:"▷"};
+    let textPointerObj = {f: ctx.measureText(textPointer.f), e: ctx.measureText(textPointer.e)};
+    let textPointerHeight = textMidHeight;
+    
+    
+    //ctx.fillStyle = "rgba(80 10 0/"+Math.abs(Math.sin(currFrame*0.005))*100+"%)";
+    ctx.fillStyle = "rgba(80, 80, 80,"+Math.abs(Math.sin(currFrame*0.05))+")";
+    ctx.font = "60px topFont";
+    ctx.fillText(textPointer.f, can.width/2 - 2*textPointerObj.f.width, textPointerHeight -5);
+
+
+    ctx.fillStyle = "rgba(120, 120, 120, "+Math.abs(Math.cos(currFrame*0.05))+")";
+    ctx.fillText(textPointer.e, can.width/2 - 2*textPointerObj.e.width, textPointerHeight -5);
+    
+
+    
+    let textCred = {h: "Autorzy:", k: "Kacper Dyduch", r: "Robert Kukla"};
+    let textCredHeight = {h: can.height - 200, k: can.height - 40, r: can.height - 120};
+    
+    ctx.textAlign = "left";
+    ctx.font = "50px Georgia";
+    ctx.fillStyle = 'rgb(230, 230, 230)';
+    
+    ctx.letterSpacing = "4px";
+    ctx.fillText(textCred.h, 20, textCredHeight.h);    
+    ctx.fillText(textCred.r, 20, textCredHeight.r);
+    ctx.fillText(textCred.k, 20, textCredHeight.k);
+    
+    ctx.letterSpacing = "0px";
+    
+
+    let TextTut = {w: "Poruszanie:   W↑   A←   S↓   D→", s: "Lewy przycisk myszy: strzal", m: "Spacja: mina"};
+    let TextTutHeight = {w: 50, s: 100, m: 150};
+
+    ctx.textAlign = "middle";
+    ctx.font = "50px topFont";
+    ctx.fillStyle = "gray";
+
+    ctx.fillText(TextTut.w, 5, TextTutHeight.w);    
+    ctx.fillText(TextTut.s, 5, TextTutHeight.s);
+    ctx.fillText(TextTut.m, 5, TextTutHeight.m);
+
+
+}
+
+
+
 
 
 //zdefiniowanie statku
@@ -191,7 +271,7 @@ function update(timestamp) {
         if(base.hasShield){
             DrawShield(can.width/2+(70+Math.sin(gameState.unpausedCounter*0.05)), can.height/2, (35+Math.sin(gameState.unpausedCounter*0.05)));//ship
         }
-
+        
         if(ship.hasShield){
             DrawShield(ship.x+(40+Math.sin(gameState.unpausedCounter*0.05)), ship.y, (20+Math.sin(gameState.unpausedCounter*0.05)));//base
         }
@@ -208,12 +288,13 @@ function update(timestamp) {
         DrawCrosshair();
         DrawScore(0);
         DrawHearts();
-
-
+        
         ChangeDiff(gameState.globalDiff)
         
+        
+        
         checkLives();
-
+        
         if(!gameState.pause){
             gameState.unpausedCounter++;
             if(gameState.unpausedCounter%2000 == 0){
@@ -233,10 +314,15 @@ function update(timestamp) {
 
     }
 
-    
+    if(gameState.menu){
+        DrawMenu();
+    }
     if(debugMode){
         DrawDebugInfo();
     }
+
+
+
 
     setTimeout(() => {
         ctx.clearRect(0, 0, can.width, can.height);
@@ -480,7 +566,8 @@ function DrawShip(){
 function DrawDebugInfo(){
     //Wyświetl info do debugowania
     ctx.fillStyle = 'gray';
-    ctx.font = "60px Arial";
+    ctx.font = "30px Arial";
+    ctx.textAlign = "left";
     ctx.fillText("deltaTime: " + deltaTime.toFixed(4),10,50);
     ctx.fillText("currFrame: " + currFrame,10,700);
     ctx.fillText("unpausedCurrFrame: " + gameState.unpausedCounter,10,750);
@@ -508,8 +595,8 @@ function DrawDebugInfo(){
     ctx.fillText("Rdiffi: " + rocksDiffi, 1900, 50)
     ctx.fillText("RspawnRate: " + spawnrateRocks, 1901, 100)
     
-    ctx.fillText("DEBUG MODE ON| press: e = spawnRock, r = restart, q = spawnWave, x = toggleDebug", 10, 1400)
-    ctx.fillText("f = spawnShooter, z = damageBase, v = audioTest", 10, 1450)
+    ctx.fillText("DEBUG MODE ON| press: e = spawnRock, r = restart, q = spawnWave, x = toggleDebug", 10, 1200)
+    ctx.fillText("f = spawnShooter, z = damageBase, v = audioTest", 10, 1250)
 }
 
 function MoveShip(){
