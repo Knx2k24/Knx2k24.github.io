@@ -117,6 +117,11 @@ function DrawMenu(){
     ctx.fillText(TextTut.m, 5, TextTutHeight.m);
 
 
+
+    if(keys["Enter"] || keys[" "] || keys["z"] || keys["x"]){
+        gameState.menu = false;
+        RestartGame();
+    }
 }
 
 
@@ -163,7 +168,25 @@ const base = {
 }
 
 
+function WriteToDb(_nick, _score, _notes){
 
+    let _date = new Date();
+    _date = _date.toDateString() +" "+ _date.toTimeString();
+
+    if(debugMode){
+        _debug = 1;
+    }else{
+        _debug = 0;
+    }
+
+    $.post('DBhandler.php', { nick: _nick, score: _score, date: _date, debugOn: _debug, notes: _notes}, function(result) { 
+        console.log(result); 
+
+        if(result.includes("error") || result.includes("Error") || result.includes("err") || result.includes("errno")){
+            alert("Bląd połączenia z bazą danych")
+        }
+    });
+}
 
 
 //iniclalizacja zmiennych odpowiedzialnych za kontrolę FPS i delty
@@ -194,6 +217,9 @@ window.addEventListener('keydown', e => {
 
     if(e.key == "t" && debugMode){
         DrawShield(100, 200, 20);
+    }
+    if(e.key == "n" && debugMode){
+        WriteToDb();
     }
 
     if(e.key == "1" && debugMode){
@@ -497,7 +523,7 @@ function RestartGame(){
     gameState.pause = false;
     gameState.hardmode = false;
     gameState.globalDiff = 1;
-    gameState.unpausedCounter = 0;
+    gameState.unpausedCounter = 1;
 }
 
 
