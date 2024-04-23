@@ -1,5 +1,7 @@
-//explosion shield
-let debugMode = true;
+//tank base
+let debugMode = false;
+let debugModeAct = 0;
+
 
 let scoreModifier = 1;
 
@@ -55,7 +57,7 @@ function DrawMenu(){
     
     let textTopColor = Math.abs(Math.tan(currFrame*0.005)*50);
     
-    ctx.fillStyle = "rgba("+textTopColor+", "+textTopColor+", 80, 1)";
+    ctx.fillStyle = "rgba("+textTopColor+", 80, 80, 1)";
     ctx.font = "240px topFont";
     ctx.fillText(textTop.t, can.width/2, textTopHeight);
     ctx.fillStyle = "rgba(0, 0, 120, 1)";
@@ -90,7 +92,7 @@ function DrawMenu(){
     
 
     
-    let textCred = {h: "Autorzy:", k: "Kacper Dyduch", r: "Robert Kukla"};
+    let textCred = {h: "Autorzy:", k: "Kacper Dyduch"};
     let textCredHeight = {h: can.height - 200, k: can.height - 40, r: can.height - 120};
     
     ctx.textAlign = "left";
@@ -154,10 +156,10 @@ const ship = {
 };
 
 const base = {
-    x: canvas.width/2 -50,
-    y: canvas.height/2 -50,
-    width: 100,
-    height: 100,
+    x: canvas.width/2 -100,
+    y: canvas.height/2 -75,
+    width: 200,
+    height: 150,
     maxHp: 200,
     hp: 200,
     alive: true,
@@ -205,6 +207,7 @@ window.addEventListener('keydown', e => {
 
     if(e.key == "x"){
         debugMode = !debugMode;
+        debugModeAct++;
     }
 
     if(e.key == "v" && debugMode){
@@ -278,6 +281,10 @@ let maxZoomer = 2;
 let spawnrateZoomer = 500;
 let zoomerDiffi = 2;
 
+let maxTank = 2;
+let spawnrateTank = 800;
+let tankDiffi = 2;
+
 function update(timestamp) {
     //obliczanie czasu od ostatniej klatki. Jeżeli gra będzie wolniej/szybciej updatować to "silnik" nie będzie działał szybciej/wolniej
     currFrame++;
@@ -307,6 +314,7 @@ function update(timestamp) {
         DrawShip();
         DrawBullets();
         DrawMines();
+        DrawTanks();
         DrawShooter();
         DrawZoomer();
         DrawRocks();
@@ -335,7 +343,10 @@ function update(timestamp) {
             }
             if(gameState.unpausedCounter%spawnrateZoomer == 0 && zoomers.length < maxZoomer){
                 SpawnWave(getRandomInt(zoomerDiffi), "zoomer");
+            }if(gameState.unpausedCounter%spawnrateTank == 0 && tanks.length < maxTank){
+                SpawnWave(getRandomInt(tankDiffi), "tank");
             }
+            
         }
 
     }
@@ -376,6 +387,11 @@ function ChangeDiff(difLevel){
         maxZoomer = 0;
         spawnrateZoomer = 0;
         ZoomerDiffi = 0;
+
+        maxTank = 0;
+        spawnrateTank = 0;
+        tankDiffi = 0;
+
     }else if(difLevel == 1){
         maxRocks = 12;
         spawnrateRocks = 200;
@@ -388,6 +404,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 2;
         spawnrateZoomer = 500;
         ZoomerDiffi = 2;
+
+        maxTank = 2;
+        spawnrateTank = 800;
+        tankDiffi = 2;
     }else if(difLevel == 2){
         maxRocks = 14;
         spawnrateRocks = 180;
@@ -400,6 +420,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 3;
         spawnrateZoomer = 400;
         ZoomerDiffi = 2;
+
+        maxTank = 3;
+        spawnrateTank = 800;
+        tankDiffi = 2;
     }else if(difLevel == 3){
         maxRocks = 16;
         spawnrateRocks = 160;
@@ -412,6 +436,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 3;
         spawnrateZoomer = 400;
         ZoomerDiffi = 3;
+
+        maxTank = 4;
+        spawnrateTank = 400;
+        tankDiffi = 3;
     }else if(difLevel == 3){
         maxRocks = 17;
         spawnrateRocks = 140;
@@ -424,6 +452,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 4;
         spawnrateZoomer = 350;
         ZoomerDiffi = 4;
+
+        maxTank = 4;
+        spawnrateTank = 400;
+        tankDiffi = 4;
     }else if(difLevel == 4){
         maxRocks = 20;
         spawnrateRocks = 140;
@@ -436,6 +468,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 5;
         spawnrateZoomer = 350;
         ZoomerDiffi = 4;
+
+        maxTank = 5;
+        spawnrateTank = 400;
+        tankDiffi = 3;
     }else if(difLevel == 5){
         maxRocks = 24;
         spawnrateRocks = 140;
@@ -448,6 +484,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 6;
         spawnrateZoomer = 750;
         ZoomerDiffi = 4;
+
+        maxTank = 6;
+        spawnrateTank = 350;
+        tankDiffi = 4;
     }else if(difLevel == 9){
         maxRocks = 25;
         spawnrateRocks = 140;
@@ -460,6 +500,10 @@ function ChangeDiff(difLevel){
         maxZoomer = 6;
         spawnrateZoomer = 750;
         ZoomerDiffi = 6;
+
+        maxTank = 4;
+        spawnrateTank = 400;
+        tankDiffi = 3;
     }
 }
 
@@ -474,6 +518,7 @@ function DrawHearts(){
     }
 }
 
+let scoreFadeCounter = 0;
 function DrawScore(delta){
     
     if(gameState.hardmode){
@@ -481,20 +526,26 @@ function DrawScore(delta){
     }
     
     
+    
     if(delta > 0){
         ship.score += (delta * scoreModifier);
+        scoreFadeCounter+= 50;
     }else{
-        //ship.score += delta;
+        
     }
 
     if(ship.score < 0){
         ship.score = 0;    
     }
     
+    if(scoreFadeCounter > 0){
+        ctx.fillStyle = 'rgb(90, '+220+scoreFadeCounter+', 90)';
+        scoreFadeCounter--;
+    }else{
+        ctx.fillStyle = 'rgb(255, 255, 255)';
+    }
     
-    
-    ctx.fillStyle = 'white';
-    ctx.font = "80px Sans";
+    ctx.font = "80px topFont";
     ctx.fillText("SCORE: " + parseInt(ship.score),20,80);
 }
 
@@ -662,6 +713,9 @@ function MoveShip(){
     if(debugMode && keys["b"] && currFrame%10 == 0){
         SpawnEnemy(500, 500, "zoomer")
     }
+    if(debugMode && keys["m"] && currFrame%10 == 0){
+        SpawnEnemy(500, 500, "tank")
+    }
     if(debugMode && keys["z"] && currFrame%10 == 0){
         base.hp -= 10;
     }
@@ -824,6 +878,7 @@ function SpawnWave(numEnemy, type){
 let zoomers = [];
 let rocks = [];
 let shooters = [];
+let tanks = [];
 function SpawnEnemy(xPos, yPos, type, xVel, yVel){
     if(type == "rock"){
         const rock = {
@@ -889,6 +944,25 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             speedY: 0,
         }
         zoomers.push(zoomer)
+    }else if(type == "tank"){
+        const tank = {
+            x: xPos,
+            y: yPos,
+            speed: 0.4,
+            width: 180,
+            height: 180,
+            sprite: 0,
+            maxHp: 300, //stała ilości zdrowia
+            hp: 300, //zmienna ilości zdrowia
+            firstFrame: true,
+            alive: true,
+            dx: 0, //różnica dystansu od bazy w osi x
+            dy: 0, //różnica dystansu od bazy w osi y
+            distance: 0, //dystans od bazy w pierwszej klatce życia asteoridy
+            speedX: 0, 
+            speedY: 0,
+        }
+        tanks.push(tank)
     }
 }
 
@@ -1096,7 +1170,7 @@ function DrawBase(){
 
     const baseImage = new Image();
     const baseImageHit = new Image();
-    baseImage.src = 'school.png';
+    baseImage.src = 'tzn-baza.png';
     baseImageHit.src = "schoolHit.png";
 
     if(base.hasShield == true){
@@ -1324,12 +1398,12 @@ function DrawHp(obj){
         //nie wiem dlaczego baza jakoś inaczej pokazuje zdrowie ale działa w taki sposób
 
         ctx.fillStyle = "rgb(255, 255, 255)";
-        ctx.fillRect(obj.x -2, obj.y + 120 -2, 100 +4, 20 +4);
+        ctx.fillRect(obj.x +50 -2, obj.y + 160 -2, 100 +4, 20 +4);
         ctx.fillStyle = "rgb(0, 0, 0)";
-        ctx.fillRect(obj.x -1, obj.y + 120 -1, 100 +2, 20 +2);
+        ctx.fillRect(obj.x +50 -1, obj.y + 160 -1, 100 +2, 20 +2);
         
         ctx.fillStyle = "rgb(255, 10, 10)";
-        ctx.fillRect(obj.x, obj.y + 120, 100* obj.hp/obj.maxHp, 20)
+        ctx.fillRect(obj.x +50, obj.y + 160, 100* obj.hp/obj.maxHp, 20)
     }else{
 
         ctx.fillStyle = "rgb(255, 255, 255)";
@@ -1432,6 +1506,99 @@ function DrawRocks(){
         }else{
             DrawScore(10);
             rocks.splice(rocks.indexOf(rock), 1);
+        }
+    })
+}
+
+function DrawTanks(){
+    tanks.forEach(tank => {
+        if(tank.alive){
+            if(tank.firstFrame){
+                tank.dx = can.width/2 - tank.x + getRandomArbitrary(-400, 400);
+                tank.dy = can.height/2 - tank.y + getRandomArbitrary(-400, 400);
+                tank.distance = Math.sqrt(tank.dx * tank.dx + tank.dy * tank.dy);
+                
+                tank.speedX = (tank.dx / tank.distance) * tank.speed * getRandomArbitrary(-2.5, 2.5);
+                tank.speedY = (tank.dy / tank.distance) * tank.speed * getRandomArbitrary(-2.5, 2.5);
+                tank.firstFrame = false;
+
+                //w pierwszej klatce, pojaw się i miej losowy offset kierunku żeby nie lecieć w pierwszej linii.
+                //miej także losową prędkość
+            }
+
+            if(!gameState.pause){
+                tank.x += tank.speedX *deltaTime;
+                tank.y += tank.speedY *deltaTime;
+            }
+
+        
+
+            ship.bullets.forEach((bullet, bulletIndex) => {
+                if (Collision(bullet, tank)) {
+                    tank.hp -= bullet.dmg;
+                    ship.bullets.splice(bulletIndex, 1);
+                }
+            })
+            ship.mines.forEach((mine, mineIndex) => {
+                if (Collision(mine, tank)) {
+                    tank.hp -= mine.dmg;
+                    mine.alive = false;
+                }
+            })
+            
+            if (Collision(ship, tank)) {
+                if(ship.hasShield){
+                    ship.hasShield = false;
+                }else{
+                    ship.hp -= 20;
+                    DrawScore(-10);
+                    ship.recentlyHit = true;
+                }
+                tank.hp = 0;
+            }
+
+            if (Collision(base, tank) && !(gameState.hardmode)) {
+                if(base.hasShield){
+                    base.hasShield = false;
+                }else{
+                    base.hp -= 20;
+                    DrawScore(-20);
+                    base.recentlyHit = true;
+                    //aElectroError = new Audio('aElectroError.wav');
+                    //aElectroError.play();
+                }
+                tank.hp = 0;
+            }
+
+            //teleportuj na drugą stronę jak wyjdziesz poza granice jak w mario
+            if(tank.x > can.width){
+                tank.x = 0
+            }
+            if(tank.y > can.height){
+                tank.y = 0
+            }
+            if(tank.x < 0){
+                tank.x = can.width;
+            }
+            if(tank.y < 0){
+                tank.y = can.height;
+            }
+
+
+            ctx.fillStyle = "rgb(121, 134, 121)";
+            ctx.fillRect(tank.x-2, tank.y-2, tank.width+4, tank.height+4);
+
+            ctx.fillStyle = "rgb(0, 0, 0)";
+            ctx.fillRect(tank.x, tank.y, tank.width, tank.height);
+
+            ctx.fillStyle = "rgb(121, 134, 121, "+tank.hp/tank.maxHp+")";
+            ctx.fillRect(tank.x, tank.y, tank.width, tank.height);
+            if(tank.hp <= 0){
+                tank.alive = false;
+            }
+        }else{
+            DrawScore(40);
+            tanks.splice(tanks.indexOf(tank), 1);
         }
     })
 }
