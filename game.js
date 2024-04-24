@@ -1,4 +1,4 @@
-//tank base
+//diff col
 let debugMode = false;
 let debugModeAct = 0;
 
@@ -285,6 +285,59 @@ let maxTank = 2;
 let spawnrateTank = 800;
 let tankDiffi = 2;
 
+difficultyRock = {
+    max: 12,
+    spawnRate: 200,
+    waveSpawn: 5,
+    type: "rock",
+    scaling: 0.8
+}
+
+difficultyShooter = {
+    max: 3,
+    spawnRate: 400,
+    waveSpawn: 2, 
+    type: "shooter",
+    scaling: 0.4
+}
+
+difficultyZoomer = {
+    max: 2,
+    spawnRate: 500,
+    waveSpawn: 2,
+    type: "zoomer",
+    scaling: 0.5
+}
+
+difficultyTank = {
+    max: 2,
+    spawnRate: 800,
+    waveSpawn: 2,
+    type: "tank",
+    scaling: 0.2
+}
+
+
+
+function changeDifficulty(){
+    difficultyRock.max = 15 + Math.round(ship.score/50);    
+    difficultyRock.spawnrate = difficultyRock.spawnrate < 100 ?   100 : (200 - Math.round(difficultyRock.scaling*ship.score/50));  //max co 100 klatek   
+    difficultyRock.waveSpawn = 5 + Math.round(ship.score/400);
+
+    difficultyShooter.max = 12 + Math.round(ship.score/80);    
+    difficultyShooter.spawnrate = difficultyShooter.spawnrate < 200 ?   200 : (400 - Math.round(difficultyShooter.scaling*ship.score/80));  //max co 200 klatek   
+    difficultyShooter.waveSpawn = 2 + Math.round(ship.score/700);
+
+    difficultyZoomer.max = 2 + Math.round(ship.score/60);    
+    difficultyZoomer.spawnrate = difficultyShooter.spawnrate < 250 ?   250 : (500 - Math.round(difficultyZoomer.scaling*ship.score/70));  //max co 250 klatek   
+    difficultyZoomer.waveSpawn = 2 + Math.round(ship.score/600);
+
+    difficultyZoomer.max = 2 + Math.round(ship.score/100);    
+    difficultyZoomer.spawnrate = difficultyShooter.spawnrate < 400 ?   400 : (800 - Math.round(difficultyZoomer.scaling*ship.score/90));  //max co 400 klatek   
+    difficultyZoomer.waveSpawn = 2 + Math.round(ship.score/1000);
+    
+}
+
 function update(timestamp) {
     //obliczanie czasu od ostatniej klatki. Jeżeli gra będzie wolniej/szybciej updatować to "silnik" nie będzie działał szybciej/wolniej
     currFrame++;
@@ -323,8 +376,7 @@ function update(timestamp) {
         DrawScore(0);
         DrawHearts();
         
-        ChangeDiff(gameState.globalDiff)
-        
+        changeDifficulty();
         
         
         checkLives();
@@ -335,16 +387,19 @@ function update(timestamp) {
                 gameState.globalDiff++;
             }
 
-            if(gameState.unpausedCounter%spawnrateRocks == 0 && rocks.length < maxRocks){
-                SpawnWave(getRandomInt(rocksDiffi), "rock");
+            
+            if(gameState.unpausedCounter%difficultyRock.spawnRate == 0 && rocks.length < difficultyRock.max){
+                SpawnWave(getRandomInt(difficultyRock.waveSpawn), "rock");
+                console.log("attempt spawn rock" )
             }
-            if(gameState.unpausedCounter%spawnrateShooter == 0 && shooters.length < maxShooter){
-                SpawnWave(getRandomInt(shooterDiffi), "shooter");
+            if(gameState.unpausedCounter%difficultyZoomer.spawnRate == 0 && zoomers.length < difficultyZoomer.max){
+                SpawnWave(getRandomInt(difficultyZoomer.waveSpawn), "zoomer");
             }
-            if(gameState.unpausedCounter%spawnrateZoomer == 0 && zoomers.length < maxZoomer){
-                SpawnWave(getRandomInt(zoomerDiffi), "zoomer");
-            }if(gameState.unpausedCounter%spawnrateTank == 0 && tanks.length < maxTank){
-                SpawnWave(getRandomInt(tankDiffi), "tank");
+            if(gameState.unpausedCounter%difficultyShooter.spawnRate == 0 && shooters.length < difficultyShooter.max){
+                SpawnWave(getRandomInt(difficultyShooter.waveSpawn), "shooter");
+            }
+            if(gameState.unpausedCounter%difficultyTank.spawnRate == 0 && tanks.length < difficultyTank.max){
+                SpawnWave(getRandomInt(difficultyTank.waveSpawn), "tank");
             }
             
         }
@@ -374,138 +429,7 @@ function update(timestamp) {
 
 }
 
-function ChangeDiff(difLevel){
-    if(difLevel == 0){
-        maxRocks = 0;
-        spawnrateRocks = 0;
-        rocksDiffi = 0;
 
-        maxShooter = 0;
-        spawnrateShooter = 0;
-        shooterDiffi = 0;
-
-        maxZoomer = 0;
-        spawnrateZoomer = 0;
-        ZoomerDiffi = 0;
-
-        maxTank = 0;
-        spawnrateTank = 0;
-        tankDiffi = 0;
-
-    }else if(difLevel == 1){
-        maxRocks = 12;
-        spawnrateRocks = 200;
-        rocksDiffi = 5;
-
-        maxShooter = 3;
-        spawnrateShooter = 400;
-        shooterDiffi = 2;
-
-        maxZoomer = 2;
-        spawnrateZoomer = 500;
-        ZoomerDiffi = 2;
-
-        maxTank = 2;
-        spawnrateTank = 800;
-        tankDiffi = 2;
-    }else if(difLevel == 2){
-        maxRocks = 14;
-        spawnrateRocks = 180;
-        rocksDiffi = 5;
-
-        maxShooter = 4;
-        spawnrateShooter = 400;
-        shooterDiffi = 2;
-
-        maxZoomer = 3;
-        spawnrateZoomer = 400;
-        ZoomerDiffi = 2;
-
-        maxTank = 3;
-        spawnrateTank = 800;
-        tankDiffi = 2;
-    }else if(difLevel == 3){
-        maxRocks = 16;
-        spawnrateRocks = 160;
-        rocksDiffi = 6;
-
-        maxShooter = 5;
-        spawnrateShooter = 400;
-        shooterDiffi = 2;
-
-        maxZoomer = 3;
-        spawnrateZoomer = 400;
-        ZoomerDiffi = 3;
-
-        maxTank = 4;
-        spawnrateTank = 400;
-        tankDiffi = 3;
-    }else if(difLevel == 3){
-        maxRocks = 17;
-        spawnrateRocks = 140;
-        rocksDiffi = 7;
-
-        maxShooter = 5;
-        spawnrateShooter = 350;
-        shooterDiffi = 3;
-
-        maxZoomer = 4;
-        spawnrateZoomer = 350;
-        ZoomerDiffi = 4;
-
-        maxTank = 4;
-        spawnrateTank = 400;
-        tankDiffi = 4;
-    }else if(difLevel == 4){
-        maxRocks = 20;
-        spawnrateRocks = 140;
-        rocksDiffi = 7;
-
-        maxShooter = 6;
-        spawnrateShooter = 350;
-        shooterDiffi = 3;
-
-        maxZoomer = 5;
-        spawnrateZoomer = 350;
-        ZoomerDiffi = 4;
-
-        maxTank = 5;
-        spawnrateTank = 400;
-        tankDiffi = 3;
-    }else if(difLevel == 5){
-        maxRocks = 24;
-        spawnrateRocks = 140;
-        rocksDiffi = 7;
-
-        maxShooter = 8;
-        spawnrateShooter = 340;
-        shooterDiffi = 3;
-
-        maxZoomer = 6;
-        spawnrateZoomer = 750;
-        ZoomerDiffi = 4;
-
-        maxTank = 6;
-        spawnrateTank = 350;
-        tankDiffi = 4;
-    }else if(difLevel == 9){
-        maxRocks = 25;
-        spawnrateRocks = 140;
-        rocksDiffi = 7;
-
-        maxShooter = 12;
-        spawnrateShooter = 320;
-        shooterDiffi = 5;
-
-        maxZoomer = 6;
-        spawnrateZoomer = 750;
-        ZoomerDiffi = 6;
-
-        maxTank = 4;
-        spawnrateTank = 400;
-        tankDiffi = 3;
-    }
-}
 
 
 function DrawHearts(){
@@ -1107,7 +1031,7 @@ function DrawExplosions(){
             
             ctx.shadowColor = exp.color;
             ctx.shadowBlur = exp.animationTimer;
-            console.log(exp.animationTimer)
+            
     
             ctx.fillStyle = exp.color;
             //trzeba to poprawić
@@ -1126,6 +1050,19 @@ function DrawExplosions(){
 function DrawShield(x, y, d){
     currX = x-5*d;
     currY = y+1*d;
+
+    for(let i = 0; i < 5; ++i){
+        ctx.shadowColor = "rgb(10, 10, 255)";
+        ctx.shadowBlur = 100;
+    
+        ctx.fillStyle = "rgb(10, 10, 255)";
+        ctx.fillRect(currX, currY -15, 30, 30);
+    
+        ctx.shadowColor = "rgb(0, 0, 0, 0)";
+        ctx.shadowBlur = 0;
+    }
+
+    
 
     ctx.lineWidth = 10;
     ctx.beginPath();
@@ -1170,7 +1107,7 @@ function DrawBase(){
 
     const baseImage = new Image();
     const baseImageHit = new Image();
-    baseImage.src = 'tzn-baza.png';
+    baseImage.src = 'baseShield.png';
     baseImageHit.src = "schoolHit.png";
 
     if(base.hasShield == true){
