@@ -1,4 +1,4 @@
-//diff col
+//mines better
 let debugMode = false;
 let debugModeAct = 0;
 
@@ -290,7 +290,7 @@ difficultyRock = {
     spawnRate: 200,
     waveSpawn: 5,
     type: "rock",
-    scaling: 0.8
+    scaling: 0.08
 }
 
 difficultyShooter = {
@@ -298,7 +298,7 @@ difficultyShooter = {
     spawnRate: 400,
     waveSpawn: 2, 
     type: "shooter",
-    scaling: 0.4
+    scaling: 0.04
 }
 
 difficultyZoomer = {
@@ -306,7 +306,7 @@ difficultyZoomer = {
     spawnRate: 500,
     waveSpawn: 2,
     type: "zoomer",
-    scaling: 0.5
+    scaling: 0.05
 }
 
 difficultyTank = {
@@ -314,27 +314,27 @@ difficultyTank = {
     spawnRate: 800,
     waveSpawn: 2,
     type: "tank",
-    scaling: 0.2
+    scaling: 0.02
 }
 
 
 
 function changeDifficulty(){
-    difficultyRock.max = 15 + Math.round(ship.score/50);    
+    difficultyRock.max = difficultyRock.max > 25 ? 25 : 15 + Math.round(difficultyRock.scaling*ship.score/50);    
     difficultyRock.spawnrate = difficultyRock.spawnrate < 100 ?   100 : (200 - Math.round(difficultyRock.scaling*ship.score/50));  //max co 100 klatek   
     difficultyRock.waveSpawn = 5 + Math.round(ship.score/400);
 
-    difficultyShooter.max = 12 + Math.round(ship.score/80);    
+    difficultyShooter.max = difficultyShooter.max > 8 ? 8 : 4 +  Math.round(difficultyShooter.scaling*ship.score/80);    
     difficultyShooter.spawnrate = difficultyShooter.spawnrate < 200 ?   200 : (400 - Math.round(difficultyShooter.scaling*ship.score/80));  //max co 200 klatek   
     difficultyShooter.waveSpawn = 2 + Math.round(ship.score/700);
 
-    difficultyZoomer.max = 2 + Math.round(ship.score/60);    
+    difficultyZoomer.max = difficultyZoomer.max > 5 ? 5:  2 + Math.round(difficultyZoomer.scaling*ship.score/60);    
     difficultyZoomer.spawnrate = difficultyShooter.spawnrate < 250 ?   250 : (500 - Math.round(difficultyZoomer.scaling*ship.score/70));  //max co 250 klatek   
     difficultyZoomer.waveSpawn = 2 + Math.round(ship.score/600);
 
-    difficultyZoomer.max = 2 + Math.round(ship.score/100);    
-    difficultyZoomer.spawnrate = difficultyShooter.spawnrate < 400 ?   400 : (800 - Math.round(difficultyZoomer.scaling*ship.score/90));  //max co 400 klatek   
-    difficultyZoomer.waveSpawn = 2 + Math.round(ship.score/1000);
+    difficultyTank.max = difficultyTank.max > 5 ? 5 : 2 + Math.round(difficultyTank.scaling*ship.score/100);    
+    difficultyTank.spawnrate = difficultyTank.spawnrate < 400 ?   400 : (800 - Math.round(difficultyTank.scaling*ship.score/90));  //max co 400 klatek   
+    difficultyTank.waveSpawn = 2 + Math.round(ship.score/1000);
     
 }
 
@@ -414,7 +414,7 @@ function update(timestamp) {
     }
 
 
-
+    DrawLightning();
 
     setTimeout(() => {
         ctx.clearRect(0, 0, can.width, can.height);
@@ -429,17 +429,33 @@ function update(timestamp) {
 
 }
 
-
+function DrawLightning(){
+    
+    ctx.beginPath();
+    ctx.lineWidth = 26;
+    ctx.strokeStyle = "rgb("+Math.abs(Math.cos(currFrame*0.01)*200)+", "+Math.abs(Math.sin(currFrame*0.01)*200)+", 10)";
+    ctx.moveTo(500 + Math.cos(currFrame*0.01)*100,500 + Math.sin(currFrame*0.01)*100);
+    ctx.lineTo(500 + Math.cos(1+currFrame*0.01)*100,500 + Math.sin(1+currFrame*0.01)*100);
+    ctx.stroke();
+}
 
 
 function DrawHearts(){
     let heartOffset = 120
     ctx.fillStyle = 'white';
     ctx.font = "80px Sans";
-
+    
     for(let i = 1; i < ship.lives + 1; ++i){
-        ctx.fillText("❤️",can.width - heartOffset *i,80);
+        if(gameState.hardmode){
+            ctx.font = "120px Sans";
+            ctx.fillText("❗",can.width - 200,120);
+        }else{
+            ctx.font = "80px Sans";
+            ctx.fillText("❤️",can.width - heartOffset *i,80);
+        }
     }
+
+
 }
 
 let scoreFadeCounter = 0;
@@ -505,6 +521,26 @@ function RestartGame(){
 function checkLives(){
     if(ship.hp <= 0){
         ship.lives--;
+
+
+        rocks.forEach(rock => {
+            rock.hp = 0;
+        })
+        zoomers.forEach(zoomer => {
+            zoomer.hp = 0;
+        })
+        shooters.forEach(shooter => {
+            shooter.hp = 0;
+        })
+        tanks.forEach(tank => {
+            tank.hp = 0;
+        })
+        
+        SpawnExplosion(can.width/2 - 50,can.height/2 - 50 , 100 , 100, "white", 350, 15, "shipDestroyed")
+
+        ship.x = base.x + base.width/2;
+        ship.y = base.y + base.height/2;
+
         ship.hp = 100;
     }
 
@@ -903,8 +939,8 @@ function DrawShooter(){
             shooter.distance = Math.sqrt(shooter.dx * shooter.dx + shooter.dy * shooter.dy);
            
             if(shooter.distance > shooter.followDistance){
-                shooter.speedX = (shooter.dx / shooter.distance) * shooter.speed; 
-                shooter.speedY = (shooter.dy / shooter.distance) * shooter.speed; //dodaj prędkość w kierunku gracza
+                shooter.speedX = (shooter.dx / shooter.distance) * shooter.speed * deltaTime; 
+                shooter.speedY = (shooter.dy / shooter.distance) * shooter.speed * deltaTime; //dodaj prędkość w kierunku gracza
             }else{
                 shooter.speedX = 0;
                 shooter.speedY = 0;
@@ -914,7 +950,7 @@ function DrawShooter(){
             DrawEnemyBullets(shooter);
             
 
-            if(!gameState.pause){
+            if(!gameState.pause){//TUTAJ ZMIANA
                 shooter.x += shooter.speedX *deltaTime;
                 shooter.y += shooter.speedY *deltaTime;
 
@@ -990,13 +1026,19 @@ function DrawShooter(){
 
 
 
-function AddShadow(x, y, w, h, color, blur, offset, intensity, opacity){
+function AddShadow(x, y, w, h, color, blur, offset, intensity, opacity, boxColorR, boxColorG, boxColorB){
 
     for(let i = 0; i<intensity; i++){
         ctx.shadowColor = color;
         ctx.shadowBlur = blur;
     
-        ctx.fillStyle = "rgb(0, 0, 0, "+opacity+")";
+        if(boxColorB == undefined|| boxColorG == undefined|| boxColorR == undefined){
+
+            ctx.fillStyle = "rgb("+0+", "+0+", "+0+", "+opacity+")";
+        }else{
+
+            ctx.fillStyle = "rgb("+boxColorR+", "+boxColorG+", "+boxColorB+", "+opacity+")";
+        }
         ctx.fillRect(x-offset/2, y-offset/2, w+offset, h+offset);
     
         ctx.shadowColor = "rgb(0, 0, 0, 0)";
@@ -1006,7 +1048,7 @@ function AddShadow(x, y, w, h, color, blur, offset, intensity, opacity){
 }
 
 explosions = [];
-function SpawnExplosion(x, y, w, h, clr, dur, intens){
+function SpawnExplosion(x, y, w, h, clr, dur, intens, typ){
     const explosion = {
         x: x,
         y: y,
@@ -1016,7 +1058,8 @@ function SpawnExplosion(x, y, w, h, clr, dur, intens){
         maxDuration: dur,
         durationScaling: 0,
         animationTimer: 0,
-        intensity: intens
+        intensity: intens,
+        type: typ
     }
     explosions.push(explosion);
 }
@@ -1036,11 +1079,14 @@ function DrawExplosions(){
             ctx.fillStyle = exp.color;
             //trzeba to poprawić
             ctx.fillRect(exp.x,exp.y,exp.width,exp.height);
-    
+            
             ctx.shadowColor = "rgb(0, 0, 0, 0)";
+            if(exp.type = "shipDestroyed"){
+                ctx.shadowColor = "rgb("+exp.animationTimer+","+exp.animationTimer+", "+exp.animationTimer+", "+exp.animationTimer+")";
+            }
             ctx.shadowBlur = 0;
             
-            if(exp.animationTimer == exp.maxDuration || exp.animationTimer == 210){
+            if(exp.animationTimer == exp.maxDuration || exp.animationTimer == 210 && exp.type != "shipDestroyed"){
                 explosions.splice(explosions.indexOf(exp), 1);
             }
         }
@@ -1050,19 +1096,6 @@ function DrawExplosions(){
 function DrawShield(x, y, d){
     currX = x-5*d;
     currY = y+1*d;
-
-    for(let i = 0; i < 5; ++i){
-        ctx.shadowColor = "rgb(10, 10, 255)";
-        ctx.shadowBlur = 100;
-    
-        ctx.fillStyle = "rgb(10, 10, 255)";
-        ctx.fillRect(currX, currY -15, 30, 30);
-    
-        ctx.shadowColor = "rgb(0, 0, 0, 0)";
-        ctx.shadowBlur = 0;
-    }
-
-    
 
     ctx.lineWidth = 10;
     ctx.beginPath();
@@ -1775,8 +1808,13 @@ function DrawMines(){
                 mine.maxDecay = mine.decayTime;
                 mine.firstFrame = false;
             }
-            ctx.fillStyle = "rgb(10, 255, 10, "+mine.decayTime/mine.maxDecay+")";
+            ctx.fillStyle = "rgb(40, 110, 40, 1)";
+            ctx.fillRect(mine.x - 2, mine.y - 2, mine.width + 4, mine.height + 4);
+            ctx.fillStyle = "rgb(10, 70, 10, "+mine.decayTime/mine.maxDecay+")";
             ctx.fillRect(mine.x, mine.y, mine.width, mine.height);
+
+            AddShadow(mine.x + mine.width/2 - mine.width/8, mine.y + mine.width/2 - mine.width/8, mine.width/4, mine.height/4, "orange", 100, 0, Math.cos(0.01*gameState.unpausedCounter * mine.maxDecay/mine.decayTime)*8, 1, 200, 10, 10)
+            
             
             
             if(!gameState.pause){
@@ -1803,9 +1841,10 @@ function DrawMines(){
             FireBullet("mine", mine, 1, -1);
             FireBullet("mine", mine, -1, -1);
             
+            /*
             aBoom = new Audio('aBoom.wav');
             aBoom.play();
-            
+            */
 
             ship.mines.splice(ship.mines.indexOf(mine), 1)
         }   
