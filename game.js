@@ -15,20 +15,22 @@ const gameState = {
     unpausedCounter: 0,
 }
 //Iniclaizacjia elementów
-const can = document.getElementById("canvas");
+const can = document.getElementById("canvas" , { alpha: false });
 const ctx = can.getContext("2d");
 
 //Iniclalizacja stylów dla canvasu
-let cWidth = 1920;
-let cHeight = 1080;
+let cWidth = 720;
+let cHeight = 480;
 
-let scale = 1.3;
+let scale = 3.3;
 can.style.width = cWidth + 'px';
 can.style.height = cHeight + 'px';
 can.style.cursor = "none";
 can.width = cWidth * scale;
 can.height = cHeight * scale;
 can.style.border = "1px black solid";
+can.style.position = "absolute";
+can.style.zIndex = "0";
 
 //Sprawdzenie czy canvas się wczytał
 if(can){
@@ -132,14 +134,14 @@ function DrawMenu(){
 
 //zdefiniowanie statku
 const ship = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
+    x: new Number(canvas.width / 2),
+    y: new Number(canvas.height / 2),
     rotation: 0,
     xAcc: 0,
     yAcc: 0,
     speed: 1,
-    width: 50,
-    height: 50,
+    width: new Number(50),
+    height: new Number(50),
     sprite: 0,
     score: 0,
     lives: 3,
@@ -339,6 +341,16 @@ function changeDifficulty(){
 }
 
 function update(timestamp) {
+
+    
+    if(gameState.hardmode){
+        ctx.fillStyle = "rgb(50, 10, 10)";
+    }else{
+        ctx.fillStyle = "rgb(10, 10, 10)";
+    }
+    ctx.clearRect(0, 0, can.width, can.height);
+    ctx.fillRect(0, 0, can.width, can.height);
+
     //obliczanie czasu od ostatniej klatki. Jeżeli gra będzie wolniej/szybciej updatować to "silnik" nie będzie działał szybciej/wolniej
     currFrame++;
     deltaTime = (timestamp - lastTimestamp) / fps;
@@ -413,31 +425,12 @@ function update(timestamp) {
         DrawDebugInfo();
     }
 
-
-    DrawLightning();
-
-    setTimeout(() => {
-        ctx.clearRect(0, 0, can.width, can.height);
-        if(gameState.hardmode){
-            ctx.fillStyle = "rgb(50, 10, 10)";
-        }else{
-            ctx.fillStyle = "rgb(10, 10, 10)";
-        }
-        ctx.fillRect(0, 0, can.width, can.height);
-        requestAnimationFrame(update);
-    }, fps);
-
-}
-
-function DrawLightning(){
     
-    ctx.beginPath();
-    ctx.lineWidth = 26;
-    ctx.strokeStyle = "rgb("+Math.abs(Math.cos(currFrame*0.01)*200)+", "+Math.abs(Math.sin(currFrame*0.01)*200)+", 10)";
-    ctx.moveTo(500 + Math.cos(currFrame*0.01)*100,500 + Math.sin(currFrame*0.01)*100);
-    ctx.lineTo(500 + Math.cos(1+currFrame*0.01)*100,500 + Math.sin(1+currFrame*0.01)*100);
-    ctx.stroke();
+    requestAnimationFrame(update);
+    
+    
 }
+
 
 
 function DrawHearts(){
@@ -502,6 +495,7 @@ function RestartGame(){
     rocks = [];
     shooters = [];
     zoomers = [];
+    tanks = [];
 
     base.hp = 200;
     base.alive = true;
@@ -691,8 +685,8 @@ function MoveShip(){
     //obsługa akceleracjii. Jest mnożona przez 0.9, żeby spadała z czasem
     ship.xAcc *= 0.9;
     ship.yAcc *= 0.9;
-    ship.x += ship.xAcc;
-    ship.y += ship.yAcc;
+    ship.x += Math.round(ship.xAcc);
+    ship.y += Math.round(ship.yAcc);
 
 
     //jeżeli statek jest poza canvasem, to teleportuj na drugą stronę tak jak w asteoridach
@@ -714,11 +708,11 @@ function MoveShip(){
 function FireBullet(type, obj, directionOverrideX, directionOverrideY) { //funkcja od tworzenia pocisków
     if(type=="ship" && ship.bulletDelay == 0){
         const bullet = {
-            x: ship.x ,
-            y: ship.y ,
+            x: Math.round(ship.x),
+            y: Math.round(ship.y),
             speed: 10,
-            width: 20,
-            height: 20,
+            width: Math.round(20),
+            height: Math.round(20),
             rotation: ship.rotation,
             decayTime: 100, //czas w klatkach po którym zniknie
             maxDecay: 100, //czas w klatkach po którym zniknie(stała)
@@ -736,11 +730,11 @@ function FireBullet(type, obj, directionOverrideX, directionOverrideY) { //funkc
         ship.bulletDelay = ship.bulletFireSpeed; //dodanie opóźnienia, żeby statek nie strzelał co klatkę
     }else if(type == "shooter" && obj.bulletDelay == 0){
         const bullet = {
-            x: obj.x + obj.width/2,
-            y: obj.y + obj.height/2,
+            x: new Number(Math.round(obj.x + obj.width/2)),
+            y: new Number(Math.round(obj.y + obj.height/2)),
             speed: 5,
-            width: 25,
-            height: 25,
+            width: new Number(25),
+            height: new Number(25),
             decayTime: 100,
             maxDecay: 0,
             firstFrame: true,
@@ -756,11 +750,11 @@ function FireBullet(type, obj, directionOverrideX, directionOverrideY) { //funkc
         obj.bulletDelay = obj.bulletFireSpeed;
     }else if(type == "mine"){
         const bullet = {
-            x: obj.x + obj.width/2,
-            y: obj.y + obj.height/2,
+            x: new Number(Math.round(obj.x + obj.width/2)),
+            y: new Number(Math.round(obj.y + obj.height/2)),
             speed: 10,
-            width: 15,
-            height: 15,
+            width: new Number(15),
+            height: new Number(15),
             decayTime: 150,
             maxDecay: 150,
             firstFrame: true,
@@ -780,10 +774,10 @@ function FireBullet(type, obj, directionOverrideX, directionOverrideY) { //funkc
 function FireMine() {
     if(ship.mineDelay == 0 && ship.mines.length < 5){
         const mine = {
-            x: ship.x ,
-            y: ship.y ,
-            width: 40,
-            height: 40,
+            x: new Number(ship.x),
+            y: new Number(ship.y),
+            width: new Number(40),
+            height: new Number(40),
             decayTime: 500,
             maxDecay: 500,
             firstFrame: true,
@@ -842,11 +836,11 @@ let tanks = [];
 function SpawnEnemy(xPos, yPos, type, xVel, yVel){
     if(type == "rock"){
         const rock = {
-            x: xPos,
-            y: yPos,
+            x: new Number(xPos),
+            y: new Number(yPos),
             speed: 1,
-            width: 90,
-            height: 90,
+            width: new Number(90),
+            height: new Number(90),
             sprite: 0,
             maxHp: 100, //stała ilości zdrowia
             hp: 100, //zmienna ilości zdrowia
@@ -861,11 +855,11 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
         rocks.push(rock)
     }else if(type == "shooter"){
         const shooter = {
-            x: xPos,
-            y: yPos,
+            x: new Number(xPos),
+            y: new Number(yPos),
             speed: 0.4,
-            width: 120,
-            height: 120,
+            width: new Number(120),
+            height: new Number(120),
             sprite: 0,
             maxHp: 200,
             hp: 200,
@@ -887,11 +881,11 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
         shooters.push(shooter)
     }else if(type == "zoomer"){
         const zoomer = {
-            x: xPos,
-            y: yPos,
+            x: new Number(xPos),
+            y: new Number(yPos),
             speed: 2,
-            width: 60,
-            height: 60,
+            width: new Number(60),
+            height: new Number(60),
             sprite: 0,
             maxHp: 50, //stała ilości zdrowia
             hp: 50, //zmienna ilości zdrowia
@@ -906,11 +900,11 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
         zoomers.push(zoomer)
     }else if(type == "tank"){
         const tank = {
-            x: xPos,
-            y: yPos,
+            x: new Number(xPos),
+            y: new Number(yPos),
             speed: 0.4,
-            width: 180,
-            height: 180,
+            width: new Number(180),
+            height: new Number(180),
             sprite: 0,
             maxHp: 300, //stała ilości zdrowia
             hp: 300, //zmienna ilości zdrowia
@@ -950,9 +944,9 @@ function DrawShooter(){
             DrawEnemyBullets(shooter);
             
 
-            if(!gameState.pause){//TUTAJ ZMIANA
-                shooter.x += shooter.speedX *deltaTime;
-                shooter.y += shooter.speedY *deltaTime;
+            if(!gameState.pause){
+                shooter.x += Math.round(shooter.speedX);
+                shooter.y += Math.round(shooter.speedY);
 
                 if(shooter.bulletDelay != 0){
                     shooter.bulletDelay--;
@@ -1404,8 +1398,9 @@ function DrawRocks(){
             }
 
             if(!gameState.pause){
-                rock.x += rock.speedX *deltaTime;
-                rock.y += rock.speedY *deltaTime;
+                rock.x += Math.round(rock.speedX *deltaTime);
+                rock.y += Math.round(rock.speedY *deltaTime);
+                
             }
 
         
@@ -1497,8 +1492,8 @@ function DrawTanks(){
             }
 
             if(!gameState.pause){
-                tank.x += tank.speedX *deltaTime;
-                tank.y += tank.speedY *deltaTime;
+                tank.x += Math.round(tank.speedX *deltaTime);
+                tank.y += Math.round(tank.speedY *deltaTime);
             }
 
         
@@ -1602,8 +1597,8 @@ function DrawZoomer(){
             }
 
             if(!gameState.pause){
-                zoomer.x += zoomer.speedX *deltaTime;
-                zoomer.y += zoomer.speedY *deltaTime;
+                zoomer.x += Math.round(zoomer.speedX *deltaTime);
+                zoomer.y += Math.round(zoomer.speedY *deltaTime);
             }
 
 
@@ -1693,8 +1688,8 @@ function DrawEnemyBullets(obj){
 
             if(!gameState.pause){
                 bullet.decayTime--;
-                bullet.x += bullet.speedX *deltaTime;
-                bullet.y += bullet.speedY *deltaTime;
+                bullet.x += Math.round(bullet.speedX *deltaTime);
+                bullet.y += Math.round(bullet.speedY *deltaTime);
             }
 
             if(bullet.x > can.width){
@@ -1767,8 +1762,8 @@ function DrawBullets(){
 
             if(!gameState.pause){
                 bullet.decayTime--;
-                bullet.x += bullet.speedX *deltaTime;
-                bullet.y += bullet.speedY *deltaTime;
+                bullet.x += Math.round(bullet.speedX *deltaTime);
+                bullet.y += Math.round(bullet.speedY *deltaTime);
             }
 
             if(bullet.x > can.width){
@@ -1852,10 +1847,14 @@ function DrawMines(){
 }
 
 function Collision(obj1, obj2) {
-    return obj1.x < obj2.x + obj2.width &&
-           obj1.x + obj1.width > obj2.x &&
-           obj1.y < obj2.y + obj2.height &&
-           obj1.y + obj1.height > obj2.y;
+    if(currFrame %2 == 0){
+        return obj1.x < obj2.x + obj2.width &&
+        obj1.x + obj1.width > obj2.x &&
+        obj1.y < obj2.y + obj2.height &&
+        obj1.y + obj1.height > obj2.y;
+    }else{
+        return false;
+    }
 }
 
 function ToRads(degrees){
