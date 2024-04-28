@@ -95,7 +95,7 @@ function DrawMenu(){
     
 
     let textCred = {h: "Autorzy:", k: " ", r: " "};
-    console.log(textCred)
+    
     
     let textCredHeight = {h: can.height - 200, k: can.height - 40, r: can.height - 120};
     
