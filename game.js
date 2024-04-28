@@ -875,7 +875,7 @@ function SpawnEnemy(xPos, yPos, type, xVel, yVel){
             distance: 0,
             speedX: 0,
             speedY: 0,
-            followDistance: 500 * scale, //maxymalny dystans podążania za graczem
+            followDistance: 1000, //maxymalny dystans podążania za graczem
             bullets: [], 
             bulletDmg: 10,
             bulletFireSpeed: 100,
