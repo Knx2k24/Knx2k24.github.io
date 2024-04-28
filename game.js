@@ -542,6 +542,7 @@ function checkLives(){
     if(ship.lives == 0){
         gameState.play = false;
         gameState.over = true;
+        alert("SCORE : " + ship.score)
     }
 }
 
