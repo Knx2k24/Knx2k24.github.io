@@ -95,7 +95,7 @@ function DrawMenu(){
     
 
     
-    let textCred = {h: "Autorzy:", k: "Kacper Dyduch"};
+    let textCred = {h: "Autorzy:", k: " ", r: " "};
     let textCredHeight = {h: can.height - 200, k: can.height - 40, r: can.height - 120};
     
     ctx.textAlign = "left";
