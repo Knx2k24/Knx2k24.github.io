@@ -30,11 +30,43 @@ function OnLoadDis(){
     console.log("Distortion Loaded");
 
     //DrawHorizontalLiens();
-    ForAllX();
-    //DrawHorizontalLiens();
-    
+    //ForAllX();
+    DrawHorizontalLiens();
+    DrawShadowedCorners();
     
 }
+
+function DrawShadowedCorners(){
+    ctxDis.fillStyle = "rgba(0, 0, 0, 0.005)";
+    for(let i = 0; i < 20; i++){
+        let widthOfShadow = 500 + i *50;
+        ctxDis.lineWidth = 20;
+        ctxDis.beginPath();
+        ctxDis.moveTo(0, 0);
+        ctxDis.lineTo(0, widthOfShadow);
+        ctxDis.lineTo(widthOfShadow, 0);
+        ctxDis.fill();
+
+        ctxDis.beginPath();
+        ctxDis.moveTo(canDis.width, canDis.height);
+        ctxDis.lineTo(canDis.width, canDis.height - widthOfShadow);
+        ctxDis.lineTo(canDis.width - widthOfShadow, canDis.height);
+        ctxDis.fill();
+
+        ctxDis.beginPath();
+        ctxDis.moveTo(0, canDis.height);
+        ctxDis.lineTo(0, canDis.height - widthOfShadow);
+        ctxDis.lineTo(widthOfShadow, canDis.height);
+        ctxDis.fill();
+
+        ctxDis.beginPath();
+        ctxDis.moveTo(canDis.width, 0);
+        ctxDis.lineTo(canDis.width, widthOfShadow);
+        ctxDis.lineTo(canDis.width - widthOfShadow, 0);
+        ctxDis.fill();
+    }
+}
+
 
 function ForAllX(){
     /*

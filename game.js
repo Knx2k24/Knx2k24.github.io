@@ -1,7 +1,8 @@
 //mines better
 let debugMode = false;
 let debugModeAct = 0;
-
+let allowBulletsFromExplosions = true;
+let allowShadows = true;
 
 let scoreModifier = 1;
 
@@ -53,7 +54,7 @@ document.fonts.add(topFont);
 function DrawMenu(){
     ctx.textAlign = "center";
     
-    let textTop = {t: "TZN", d: "DEFENDERS"};
+    let textTop = {t: "BASE", d: "DEFENDERS"};
     let textTopObj = {t: ctx.measureText(textTop.t), d: ctx.measureText(textTop.d)};
     let textTopHeight = 200 + 4*Math.sin(currFrame*0.05); 
     
@@ -626,8 +627,8 @@ function DrawDebugInfo(){
     ctx.fillText("Rdiffi: " + rocksDiffi, 1900, 50)
     ctx.fillText("RspawnRate: " + spawnrateRocks, 1901, 100)
     
-    ctx.fillText("DEBUG MODE ON| press: e = spawnRock, r = restart, q = spawnWave, x = toggleDebug", 10, 1200)
-    ctx.fillText("f = spawnShooter, z = damageBase, v = audioTest", 10, 1250)
+    ctx.fillText("DEBUG MODE ON| press: e = spawnRock,f = spawn shooter, m = spawn heavy, b = spawn zoomer, r = restart, q = spawnWave, x = toggleDebug", 10, 1200)
+    ctx.fillText("z = damageBase, v = audioTest, g = toggle shadows", 10, 1250)
 }
 
 function MoveShip(){
@@ -678,6 +679,9 @@ function MoveShip(){
     }
     if(debugMode && keys["r"]){
         RestartGame();
+    }
+    if(debugMode && keys["g"] && currFrame%10 == 0){
+        allowShadows = !allowShadows;
     }
 
     
@@ -1021,22 +1025,23 @@ function DrawShooter(){
 
 
 function AddShadow(x, y, w, h, color, blur, offset, intensity, opacity, boxColorR, boxColorG, boxColorB){
-
-    for(let i = 0; i<intensity; i++){
-        ctx.shadowColor = color;
-        ctx.shadowBlur = blur;
+    if(allowShadows){
+        for(let i = 0; i<intensity; i++){
+            ctx.shadowColor = color;
+            ctx.shadowBlur = blur;
+        
+            if(boxColorB == undefined|| boxColorG == undefined|| boxColorR == undefined){
     
-        if(boxColorB == undefined|| boxColorG == undefined|| boxColorR == undefined){
-
-            ctx.fillStyle = "rgb("+0+", "+0+", "+0+", "+opacity+")";
-        }else{
-
-            ctx.fillStyle = "rgb("+boxColorR+", "+boxColorG+", "+boxColorB+", "+opacity+")";
+                ctx.fillStyle = "rgb("+0+", "+0+", "+0+", "+opacity+")";
+            }else{
+    
+                ctx.fillStyle = "rgb("+boxColorR+", "+boxColorG+", "+boxColorB+", "+opacity+")";
+            }
+            ctx.fillRect(x-offset/2, y-offset/2, w+offset, h+offset);
+        
+            ctx.shadowColor = "rgb(0, 0, 0, 0)";
+            ctx.shadowBlur = 0;
         }
-        ctx.fillRect(x-offset/2, y-offset/2, w+offset, h+offset);
-    
-        ctx.shadowColor = "rgb(0, 0, 0, 0)";
-        ctx.shadowBlur = 0;
     }
 
 }
@@ -1055,7 +1060,9 @@ function SpawnExplosion(x, y, w, h, clr, dur, intens, typ){
         intensity: intens,
         type: typ
     }
-    explosions.push(explosion);
+    if(allowShadows){
+        explosions.push(explosion);
+    }
 }
 
 function DrawExplosions(){
@@ -1823,23 +1830,26 @@ function DrawMines(){
 
             SpawnExplosion(mine.x+mine.width/2, mine.y+mine.height/2, 20, 20, "green", 300, 5)
             SpawnExplosion(mine.x+mine.width/2, mine.y+mine.height/2, 20, 20, "orange", 300, 5)
-            //to jest absolutne spaghetti, ale działa
-            //pojaw pociski od "wybuchu" lewo, prawo, góra, dół
-            FireBullet("mine", mine, 0, 1);
-            FireBullet("mine", mine, 1, 0);
-            FireBullet("mine", mine, 0, -1);
-            FireBullet("mine", mine, -1, 0);
             
-            //pojaw pociski od "wybuchu" na ukosy wszystkie
-            FireBullet("mine", mine, 1, 1);
-            FireBullet("mine", mine, -1, 1);
-            FireBullet("mine", mine, 1, -1);
-            FireBullet("mine", mine, -1, -1);
-            
-            /*
-            aBoom = new Audio('aBoom.wav');
-            aBoom.play();
-            */
+            if(allowBulletsFromExplosions){
+                //to jest absolutne spaghetti, ale działa
+                //pojaw pociski od "wybuchu" lewo, prawo, góra, dół
+                FireBullet("mine", mine, 0, 1);
+                FireBullet("mine", mine, 1, 0);
+                FireBullet("mine", mine, 0, -1);
+                FireBullet("mine", mine, -1, 0);
+                
+                //pojaw pociski od "wybuchu" na ukosy wszystkie
+                FireBullet("mine", mine, 1, 1);
+                FireBullet("mine", mine, -1, 1);
+                FireBullet("mine", mine, 1, -1);
+                FireBullet("mine", mine, -1, -1);
+                
+                /*
+                aBoom = new Audio('aBoom.wav');
+                aBoom.play();
+                */
+            }
 
             ship.mines.splice(ship.mines.indexOf(mine), 1)
         }   
@@ -1847,7 +1857,7 @@ function DrawMines(){
 }
 
 function Collision(obj1, obj2) {
-    if(currFrame %2 == 0){
+    if(currFrame %2 == 0){ //sprawdzamy co druga klatkę, żeby przyspieszyć obliczenia
         return obj1.x < obj2.x + obj2.width &&
         obj1.x + obj1.width > obj2.x &&
         obj1.y < obj2.y + obj2.height &&
