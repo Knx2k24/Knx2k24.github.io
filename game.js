@@ -94,8 +94,8 @@ function DrawMenu(){
     ctx.fillText(textPointer.e, can.width/2 - 2*textPointerObj.e.width, textPointerHeight -5);
     
 
-    
     let textCred = {h: "Autorzy:", k: " ", r: " "};
+    
     let textCredHeight = {h: can.height - 200, k: can.height - 40, r: can.height - 120};
     
     ctx.textAlign = "left";
