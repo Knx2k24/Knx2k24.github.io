@@ -9,6 +9,7 @@ let scoreModifier = 1;
 const gameState = {
     play: false,
     hardmode: false,
+    nameInput: false,
     over: false,
     pause: false,
     menu: false,
@@ -44,9 +45,11 @@ if(can){
 function OnLoad(){
     requestAnimationFrame(update);
     gameState.play = false;
-    gameState.menu = true;
     debugMode = false;
     atestAudio = new Audio('testAudio.mp3');
+    
+    RestartGame();
+
 }
 
 var topFont = new FontFace('topFont', 'url(fonts/MinecraftTen-VGORe.ttf)');
@@ -124,13 +127,105 @@ function DrawMenu(){
 
 
 
-    if(keys["Enter"] || keys[" "] || keys["z"] || keys["x"]){
-        gameState.menu = false;
-        RestartGame();
-    }
+    
 }
 
+let inputText = ['_', '_', '_', '_'];
+function InputName(){
+    ctx.textAlign = "center";
+    
+    let textTop = {t: "GAME", d: "OVER"};
+    let textTopObj = {t: ctx.measureText(textTop.t), d: ctx.measureText(textTop.d)};
+    let textTopHeight = 200 + 4*Math.sin(currFrame*0.05); 
+    
+    let textTopColor = Math.abs(Math.sin(currFrame*0.01)*50);
+    
+    ctx.fillStyle = "rgba("+textTopColor+", 0, 80, 1)";
+    ctx.font = "240px topFont";
+    ctx.fillText(textTop.t, can.width/2, textTopHeight);
+    ctx.fillStyle = "rgba("+textTopColor+", 0, 80, 1)";
+    ctx.font = "180px topFont";
+    ctx.fillText(textTop.d, can.width/2, textTopHeight + 200);
 
+
+    let textMidHeight = 600;
+    let textMid  = "SCORE: " + ship.score;
+    ctx.fillStyle = "rgba(40, 0, 160, 1)";
+    ctx.font = "70px topFont";
+
+    ctx.fillText(textMid, can.width/2, textMidHeight);
+
+    let inputTextHeight = 900;
+    
+    ctx.fillStyle = "rgba(200, 200, 200, 1)";
+    ctx.font = "100px topFont";
+
+    for(i = 0; i < inputText.length; i++){        
+        ctx.fillText(inputText[i], can.width/2 - 300 + i*200, inputTextHeight);
+    }
+
+
+    let textTipsHeight = {t: can.height - 200, m: can.height - 150, d: can.height - 100};
+    let textTips  = {t: "Zapisz wynik na leaderboardzie!", m: "ENTER - zapisz", d: "ESC - nie zapisuj"};
+    ctx.fillStyle = "rgba(250, 250, 250, 1)";
+    ctx.font = "50px topFont";
+
+    ctx.fillText(textTips.t, can.width/2, textTipsHeight.t);
+    ctx.fillText(textTips.m, can.width/2, textTipsHeight.m);
+    ctx.fillText(textTips.d, can.width/2, textTipsHeight.d);
+
+
+    ctx.textAlign = "left";
+}
+
+let currentInputIndex = 0;
+let truncatedNick = "";
+window.addEventListener('keydown', e=>{ //Dla inputu nazwy gracza
+    if(gameState.nameInput){
+    let possibleCharacters = "qwertyuiopasdfghjklzxcvbnm";
+    let bannedCharacters = [';', '-', ':', "/", ".", ",", "\\", "\\\\", "'", '"', "=", "+"];
+    let bannedNicks = ["chuj", "cipa", "cipe", "cipy", "dupa", "pizd", "2137", "hwdp", "sex", "nigg", "jeb", "kurw", "krwa", "qrwa", "gown", "gwno", "huj", "hui", "jpld", "zjeb", "cock", "shit", "piss", "crap", "fucc", "fuck", "damn", "cunt"];
+
+    
+    if(e.key == "Enter"){
+        for(let i = 0; i < inputText.length; i++){
+            truncatedNick += inputText[i];
+        }
+
+        for(let i = 0; i < bannedCharacters.length; i++){
+            if(truncatedNick.includes[bannedCharacters[i]]){
+                alert("Niedozwolony znak znaleziony w nicku, restartuje grę");
+                
+                truncatedNick = "NiedozwolonyZnak";
+            }
+        }
+        
+        for(let i = 0; i < bannedNicks.length; i++){
+            if(truncatedNick == bannedNicks[i]){
+                alert("Niedozwolona nazwa, restartuje grę");
+                
+                truncatedNick = "Niedozwolona nazwa"
+            }
+        }
+
+
+        WriteToDb(truncatedNick, ship.score, "z event listenera")
+        truncatedNick = "";
+
+        RestartGame();
+    }else if(e.key == "Backspace"){
+        if(currentInputIndex > 0){
+            inputText[currentInputIndex - 1] = "_";
+            currentInputIndex--;
+        }
+    }else{
+        if(currentInputIndex < 4 && possibleCharacters.indexOf(e.key) > -1){
+            inputText[currentInputIndex] = e.key;
+            currentInputIndex++;
+        }
+    }   
+    }
+})
 
 
 
@@ -175,7 +270,7 @@ const base = {
 
 
 function WriteToDb(_nick, _score, _notes){
-
+    console.log("attempt to write to DB: " + _nick + " " + _score + " " + _notes)
     let _date = new Date();
     _date = _date.toDateString() +" "+ _date.toTimeString();
 
@@ -204,8 +299,14 @@ let deltaTime, lastTimestamp;
 const keys = [];
 window.addEventListener('keydown', e => {
     keys[e.key] = true;
+    console.log(gameState)
 
-    if(e.key == "Escape"){
+    if(e.key == " " && gameState.menu){
+        BeginGame();
+    }
+
+
+    if(e.key == "Escape" && gameState.play){
         gameState.pause = !gameState.pause;
     }
 
@@ -214,9 +315,6 @@ window.addEventListener('keydown', e => {
         debugModeAct++;
     }
 
-    if(e.key == "v" && debugMode){
-        atestAudio.play();
-    }
 
     if(e.key == "`" && debugMode){
         gameState.globalDiff = 0
@@ -227,16 +325,6 @@ window.addEventListener('keydown', e => {
     }
     if(e.key == "n" && debugMode){
         WriteToDb();
-    }
-
-    if(e.key == "1" && debugMode){
-        gameState.globalDiff = 1
-    }
-    if(e.key == "2" && debugMode){
-        gameState.globalDiff = 2
-    }
-    if(e.key == "3" && debugMode){
-        gameState.globalDiff = 3
     }
 
 });
@@ -324,6 +412,8 @@ difficultyTank = {
 
 
 function changeDifficulty(){
+   
+
     difficultyRock.max = difficultyRock.max > 25 ? 25 : 15 + Math.round(difficultyRock.scaling*ship.score/50);    
     difficultyRock.spawnrate = difficultyRock.spawnrate < 100 ?   100 : (200 - Math.round(difficultyRock.scaling*ship.score/50));  //max co 100 klatek   
     difficultyRock.waveSpawn = 5 + Math.round(ship.score/400);
@@ -389,7 +479,7 @@ function update(timestamp) {
         DrawCrosshair();
         DrawScore(0);
         DrawHearts();
-        
+        DrawMineAmmo();
         changeDifficulty();
         
         
@@ -423,6 +513,10 @@ function update(timestamp) {
     if(gameState.menu){
         DrawMenu();
     }
+    if(gameState.nameInput){
+        InputName();
+    }
+    
     if(debugMode){
         DrawDebugInfo();
     }
@@ -433,7 +527,12 @@ function update(timestamp) {
     
 }
 
-
+function DrawMineAmmo(){
+    for(let i = 0; i < 5 - ship.mines.length; i++){
+        ctx.fillStyle = "rgb(50, 100, 50)";
+        ctx.fillRect(ship.x - ship.width + i *20 + 2.5, ship.y + ship.height -20, 15, 15);
+    }
+}
 
 function DrawHearts(){
     let heartOffset = 120
@@ -493,6 +592,8 @@ function RestartGame(){
     ship.lives = 3;
     ship.score = 0;
     ship.hasShield = false;
+
+    scoreModifier = 1;
     
     rocks = [];
     shooters = [];
@@ -504,13 +605,22 @@ function RestartGame(){
     base.hasShield = false;
     base.pickups = [];
     
-
-    gameState.play = true;
+    gameState.menu = true;
+    gameState.play = false;
     gameState.over = false;
     gameState.pause = false;
     gameState.hardmode = false;
+    gameState.nameInput = false;
     gameState.globalDiff = 1;
     gameState.unpausedCounter = 1;
+
+    inputText = ["_", "_", "_", "_"];
+
+}
+function BeginGame(){
+    console.log("CALLLED BEGIN GAME")
+    gameState.menu = false;
+    gameState.play = true;
 }
 
 
@@ -542,8 +652,7 @@ function checkLives(){
 
     if(ship.lives == 0){
         gameState.play = false;
-        gameState.over = true;
-        alert("SCORE : " + ship.score)
+        gameState.nameInput = true;
     }
 }
 
@@ -558,6 +667,7 @@ let shipStatusDamageStart = 0;
 function DrawShip(){
     DrawHp(ship);
     
+    if(ship.hp == 69.69) {console.log("sus amogus")}
 
     //Pokazywanie efektu po trafieniu w statek
     //to jest absolutie głupio napisane, ale działa
@@ -589,11 +699,11 @@ function DrawShip(){
     rysujemy statek a później odwracamy tak jak było na początku
     Bez tego to statek obracał się według punktu 0:0 więc duże kółka robił wokół lewego górnego rogu
     */
-    
+    let randomSin = Math.sin(currFrame*0.001)
     ctx.translate(ship.x, ship.y)
     ctx.rotate(ToRads(ship.rotation))
     ctx.drawImage(shipImage, -ship.width/2, -ship.height/2, ship.width, ship.height);
-    ctx.rotate(ToRads(-ship.rotation))
+    ctx.rotate(ToRads(-ship.rotation ))
     ctx.translate(-ship.x, -ship.y)
 }
 
@@ -636,25 +746,25 @@ function DrawDebugInfo(){
 function MoveShip(){
     if(!gameState.pause){ //Obracaj statek za pomocą matematyki której ledwo rozumiem i obsługuj poruszanie się statku
         ship.rotation = ToDeg(Math.atan2(mouse.x - ship.x, - (mouse.y - ship.y)));
-        if(keys["ArrowLeft"] || keys["a"]){
+        if(keys["ArrowLeft"] || keys["a"] && gameState.play){
             ship.xAcc += -ship.speed * deltaTime;
         }
-        if(keys["ArrowRight"] || keys["d"]){
+        if(keys["ArrowRight"] || keys["d"] && gameState.play){
             ship.xAcc += ship.speed * deltaTime;
         }
-        if(keys["ArrowUp"]|| keys["w"]){
+        if(keys["ArrowUp"]|| keys["w"] && gameState.play){
             ship.yAcc += -ship.speed * deltaTime;
         }
-        if(keys["ArrowDown"]|| keys["s"]){
+        if(keys["ArrowDown"]|| keys["s"] && gameState.play){
             ship.yAcc += ship.speed * deltaTime;
         }
 
 
 
-        if(mouse.leftClick){
+        if(mouse.leftClick && gameState.play){
             FireBullet("ship");
         }
-        if(mouse.rightClick || keys[" "]){ // spacja to jest dosłownie spacja a nie "Space" z jakiegoś powodu
+        if(mouse.rightClick || keys[" "] && gameState.play){ // spacja to jest dosłownie spacja a nie "Space" z jakiegoś powodu
             FireMine();
         }
     }
