@@ -2,8 +2,8 @@ const canDis = document.getElementById("canvasDistortionLayer");
 const ctxDis = canDis.getContext("2d");
 
 
-canDis.style.width = cWidth + 'px';
-canDis.style.height = cHeight + 'px';
+canDis.style.width = cWidth*1.5 + 'px';
+canDis.style.height = cHeight*1.5 + 'px';
 canDis.style.cursor = "none";
 canDis.width = cWidth * scale;
 canDis.height = cHeight * scale;
@@ -12,7 +12,7 @@ canDis.style.position = "absolute";
 canDis.style.zIndex = "1";
 
 const screenRatio = canDis.width/canDis.height;
-console.log(screenRatio)
+console.log("Screen ratio : " + screenRatio)
 
 
 

@@ -3,14 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>TZN DEFENDERS</title>
 </head>
 <body>
     <canvas id="canvasDistortionLayer" oncontextmenu="return false" style="pointer-events: none"></canvas>
     <canvas id="canvas" oncontextmenu="return false"></canvas>
     
+    <div id="description">
+        <h1>STEROWANIE</h1>
+        <h2>Poruszanie:<br> W↑   A←   S↓   D→</h2>
+        <h2>Lewy przycisk myszy: strzał</h2>
+        <h2>Spacja: mina</h2>
+
+        <h1><hr></h1>
+        <h3>Statek ma 3 życia, które może wykorzystać dopuki baza nie zostanie zniszczona.</h3>
+        <h3>W momencie zniszczenia bazy, statek traci możliwość odradzania się.</h3>
+        <h3>Zdobądź jak najwięcej punktów zanim wyczerpiesz wszystkie życia!</h3>
+    </div>
+
+    <div class="credits">
+        Autor: <hr> Kacper Dyduch <br> kierunek Technik Programista
+    </div>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script src="game.js"></script>
     <script src="distortion.js"></script>
+    <style>
+        .credits{
+            color: white;
+            padding: 1rem;
+            text-align: right;
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            font-size: 1rem;
+            font-weight: 800;
+            align-self: baseline;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #description{
+            color:white;
+            max-width: 18%;
+        }
+        canvas{
+            top:50%;
+            left: 50%;
+            transform: translate(-50%, -50%)
+        }
+        body{
+            
+            background-color: black;
+        }
+    </style>
 </body>
 </html>

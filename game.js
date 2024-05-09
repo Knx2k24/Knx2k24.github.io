@@ -24,15 +24,19 @@ const ctx = can.getContext("2d");
 let cWidth = 720;
 let cHeight = 480;
 
-let scale = 3.3;
-can.style.width = cWidth + 'px';
-can.style.height = cHeight + 'px';
+
+let scale = 3;
+can.style.width = cWidth*1.5 + 'px';
+can.style.height = cHeight*1.5 + 'px';
 can.style.cursor = "none";
 can.width = cWidth * scale;
 can.height = cHeight * scale;
 can.style.border = "1px black solid";
 can.style.position = "absolute";
 can.style.zIndex = "0";
+
+
+
 
 //Sprawdzenie czy canvas się wczytał
 if(can){
@@ -46,7 +50,6 @@ function OnLoad(){
     requestAnimationFrame(update);
     gameState.play = false;
     debugMode = false;
-    atestAudio = new Audio('testAudio.mp3');
     
     RestartGame();
 
@@ -57,7 +60,7 @@ document.fonts.add(topFont);
 function DrawMenu(){
     ctx.textAlign = "center";
     
-    let textTop = {t: "BASE", d: "DEFENDERS"};
+    let textTop = {t: "TZN", d: "DEFENDERS"};
     let textTopObj = {t: ctx.measureText(textTop.t), d: ctx.measureText(textTop.d)};
     let textTopHeight = 200 + 4*Math.sin(currFrame*0.05); 
     
@@ -77,10 +80,10 @@ function DrawMenu(){
     ctx.fillStyle = 'white';
     ctx.font = "80px topFont";
     ctx.fillText(textMid, can.width/2, textMidHeight);
+    ctx.font = "30px topFont";
+    ctx.fillText("( SPACE )", can.width/2, textMidHeight+70);
     
-    
-    
-    
+    ctx.font = "80px topFont";
     //▶▷
     let textPointer = {f:"▶", e:"▷"};
     let textPointerObj = {f: ctx.measureText(textPointer.f), e: ctx.measureText(textPointer.e)};
@@ -97,7 +100,7 @@ function DrawMenu(){
     ctx.fillText(textPointer.e, can.width/2 - 2*textPointerObj.e.width, textPointerHeight -5);
     
 
-    let textCred = {h: "Autorzy:", k: " ", r: " "};
+    let textCred = {h: "Autor:", k: "", r: "Kacper Dyduch"};
     
     
     let textCredHeight = {h: can.height - 200, k: can.height - 40, r: can.height - 120};
@@ -172,7 +175,6 @@ function InputName(){
 
     ctx.fillText(textTips.t, can.width/2, textTipsHeight.t);
     ctx.fillText(textTips.m, can.width/2, textTipsHeight.m);
-    ctx.fillText(textTips.d, can.width/2, textTipsHeight.d);
 
 
     ctx.textAlign = "left";
@@ -213,6 +215,7 @@ window.addEventListener('keydown', e=>{ //Dla inputu nazwy gracza
         truncatedNick = "";
 
         RestartGame();
+        
     }else if(e.key == "Backspace"){
         if(currentInputIndex > 0){
             inputText[currentInputIndex - 1] = "_";
@@ -283,7 +286,7 @@ function WriteToDb(_nick, _score, _notes){
     $.post('DBhandler.php', { nick: _nick, score: _score, date: _date, debugOn: _debug, notes: _notes}, function(result) { 
         console.log(result); 
 
-        if(result.includes("error") || result.includes("Error") || result.includes("err") || result.includes("errno")){
+        if(result.includes("error") || result.includes("Error") || result.includes("errno")){
             alert("Bląd połączenia z bazą danych")
         }
     });
@@ -299,7 +302,6 @@ let deltaTime, lastTimestamp;
 const keys = [];
 window.addEventListener('keydown', e => {
     keys[e.key] = true;
-    console.log(gameState)
 
     if(e.key == " " && gameState.menu){
         BeginGame();
@@ -434,7 +436,19 @@ function changeDifficulty(){
 
 function update(timestamp) {
 
-    
+    if(gameState.play){
+        $("#description").animate({
+            opacity:"30%"
+        }, 1000)
+    }else{
+        $("#description").css({
+            opacity:"100%"
+        })
+    }
+
+
+
+
     if(gameState.hardmode){
         ctx.fillStyle = "rgb(50, 10, 10)";
     }else{
@@ -459,7 +473,7 @@ function update(timestamp) {
         }
 
         if(base.hasShield){
-            DrawShield(can.width/2+(70+Math.sin(gameState.unpausedCounter*0.05)), can.height/2, (35+Math.sin(gameState.unpausedCounter*0.05)));//ship
+            DrawShield(can.width/2+(90+Math.sin(gameState.unpausedCounter*0.05)), can.height/2, (45+Math.sin(gameState.unpausedCounter*0.05)));//ship
         }
         
         if(ship.hasShield){
@@ -535,17 +549,17 @@ function DrawMineAmmo(){
 }
 
 function DrawHearts(){
-    let heartOffset = 120
+    let heartOffset = 220
     ctx.fillStyle = 'white';
-    ctx.font = "80px Sans";
+    ctx.font = "200px Sans";
     
     for(let i = 1; i < ship.lives + 1; ++i){
         if(gameState.hardmode){
             ctx.font = "120px Sans";
             ctx.fillText("❗",can.width - 200,120);
         }else{
-            ctx.font = "80px Sans";
-            ctx.fillText("❤️",can.width - heartOffset *i,80);
+            ctx.font = "120px Sans";
+            ctx.fillText("❤️",can.width - heartOffset *i,140);
         }
     }
 
@@ -615,6 +629,8 @@ function RestartGame(){
     gameState.unpausedCounter = 1;
 
     inputText = ["_", "_", "_", "_"];
+    currentInputIndex = 0;
+    truncatedNick = "";
 
 }
 function BeginGame(){
@@ -631,15 +647,19 @@ function checkLives(){
 
         rocks.forEach(rock => {
             rock.hp = 0;
+            ship.score -= 5;
         })
         zoomers.forEach(zoomer => {
             zoomer.hp = 0;
+            ship.score -= 15;
         })
         shooters.forEach(shooter => {
             shooter.hp = 0;
+            ship.score -= 20;
         })
         tanks.forEach(tank => {
             tank.hp = 0;
+            ship.score -= 30;
         })
         
         SpawnExplosion(can.width/2 - 50,can.height/2 - 50 , 100 , 100, "white", 350, 15, "shipDestroyed")
@@ -679,7 +699,8 @@ function DrawShip(){
 
     if(shipStatusDamageStart != 0){
         if(currFrame%20 == 0){
-            ctx.fillText("HIT!",ship.x,ship.y);
+            ctx.font = "40px topFont";
+            ctx.fillText("!",ship.x+15,ship.y-15);
             shipStatusDamageStart--;
         }
     }
@@ -690,7 +711,6 @@ function DrawShip(){
     shipImage.src = 'ship.png';
 
     if(ship.hasShield == true){
-        shipImage.src = "shipShielded.png"
     }
     
     //kontrola rotacjii statku
@@ -1253,12 +1273,10 @@ function DrawBase(){
 
     const baseImage = new Image();
     const baseImageHit = new Image();
-    baseImage.src = 'baseShield.png';
-    baseImageHit.src = "schoolHit.png";
+    baseImage.src = 'tzn-baza.png';
+    baseImageHit.src = "tzn-explosion.png";
 
-    if(base.hasShield == true){
-        baseImage.src = "schoolShielded.png"
-    }
+    
     
     if(base.alive){
         
@@ -1269,8 +1287,6 @@ function DrawBase(){
 
         if(base.hp <= 0){
             base.alive = false;
-            aElectroErrorHeavy = new Audio('aElectroErrorHeavy.wav');
-            aElectroErrorHeavy.play();
         }
 
         if(base.recentlyHit){
@@ -1310,8 +1326,8 @@ function SpawnPickup(idPickup){
             x: base.x + base.width/2,
             y: base.y + base.height/2,
             speed: 1,
-            width: 40,
-            height: 40,
+            width: 70,
+            height: 70,
             sprite: 0,
             firstFrame: true,
             picked: false,
@@ -1332,8 +1348,8 @@ function SpawnPickup(idPickup){
             x: base.x + base.width/2,
             y: base.y + base.height/2,
             speed: 1,
-            width: 40,
-            height: 40,
+            width: 70,
+            height: 70,
             sprite: 0,
             firstFrame: true,
             firstPickup: true,
@@ -1355,8 +1371,8 @@ function SpawnPickup(idPickup){
             x: base.x + base.width/2,
             y: base.y + base.height/2,
             speed: 1,
-            width: 40,
-            height: 40,
+            width: 70,
+            height: 70,
             sprite: 0,
             firstFrame: true,
             firstPickup: true,
@@ -1378,8 +1394,8 @@ function SpawnPickup(idPickup){
             x: base.x + base.width/2,
             y: base.y + base.height/2,
             speed: 1,
-            width: 40,
-            height: 40,
+            width: 70,
+            height: 70,
             sprite: 0,
             firstFrame: true,
             firstPickup: true,
@@ -1752,8 +1768,6 @@ function DrawZoomer(){
                     base.hp -= 10;
                     DrawScore(-20);
                     base.recentlyHit = true;
-                    aElectroError = new Audio('aElectroError.wav');
-                    aElectroError.play();
                 }
                 zoomer.hp = 0;
             }
